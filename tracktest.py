@@ -3,7 +3,8 @@ import numpy as np
 import cv2
 
 # video capture object
-video_capture = cv2.VideoCapture(1)
+video_capture_device = 1 # TODO: make this better
+video_capture = cv2.VideoCapture(video_capture_device)
 
 # Check the video stream started ok
 assert video_capture.isOpened()
@@ -65,12 +66,12 @@ while True:
 
     # Check for user input
     keyPress = cv2.waitKey(1)
-
+    
     if keyPress & 0xFF == ord('q'):
         # Quit
         video_capture.release()
         break
-    else:
-        if keyPress & 0xFF == ord('c'):
-            # Clear the trace
-            storedTrace = []
+
+    elif keyPress & 0xFF == ord('c'):
+        # Clear the trace
+        storedTrace = []
