@@ -13,12 +13,6 @@ assert video_capture.isOpened()
 record = False
 outfile = 'output.avi'
 
-
-if record:
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(outfile,fourcc, 20.0, (640,480))
-
 radius = 41 #must be an odd number, or else GaussianBlur will fail
 
 # Plotting colours. TODO: vary over time
@@ -75,3 +69,10 @@ while True:
     elif keyPress & 0xFF == ord('c'):
         # Clear the trace
         storedTrace = []
+    
+    elif keyPress & 0xFF == ord('r'):
+        if not record:
+            # For testing purposes, define the codec and create VideoWriter object
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            out = cv2.VideoWriter(outfile,fourcc, 20.0, (640,480))
+            record = True
