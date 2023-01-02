@@ -22,20 +22,14 @@ outfile = 'output.avi'
 radius = 41 # must be an odd number, or else GaussianBlur will fail
 
 # Plotting colours. TODO: vary better over time
-circleColor = (0, 0, 255)
+circleColor = (0, 0, 255) # Red
+shotColor   = (255, 0, 255) # Magenta
 circleThickness = 2
 lineColor = []
 
-# Line colour variance with time (frame) parameters
-startRed = 0
-startGreen = 255
-startBlue = 0
-# Rates of change / frame
-dr = 1
-dg = -1
-db = 1
+dc = (0, 15, -15)    # Rates of colour change / frame (b, r, g)
 
-lineThickness = 1
+lineThickness = 2
 
 # List of captured points
 storedTrace = []
@@ -43,11 +37,6 @@ startTrace = 1
 frames = 0
 maxFrames = 255 # Max number of points/lines to plot
 recordedShotLoc = []
-
-# Initial line colours
-red = startRed
-green = startGreen
-blue = startBlue
 
 # Trigger value to detect the reference point
 minDetectionValue = 50
@@ -95,32 +84,11 @@ while True:
         if volume_norm >= clickThreshold:
             recordedShotLoc = maxLoc
             shotFired = True
-            dr = 0
-            dr = 0
-            db = 0
-            red = 255
-            green = 0
-            blue = 0
         else:
             circleColor = (0, 0, 255)
 
-        # Vary the line colour TODO: improve this
-        thisColour = (blue, green, red, 0)
-        lineColor.append(thisColour)
-
-        red += dr
-        green += dg
-        blue += db
-
-        if red >= 255 or red <= 0:
-            dr = -1 * dr
-
-        if green >= 255 or green <= 0:
-            dg = -1 * dg
-
-        if blue >= 255 or blue <= 0:
-            db = -1 * db
-
+        lineColor.append((0, 0, 255, 0)) # red
+    
         # Add the discovered point to our list
         storedTrace.append(maxLoc)
 
@@ -130,16 +98,26 @@ while True:
             #startTrace = frames - maxFrames
 
         # add a one-off circle
-        cv2.circle(image, maxLoc, 5, circleColor, circleThickness)
+        # cv2.circle(image, maxLoc, 5, circleColor, circleThickness)
 
 
     # Plot the line traces so far
     for n in range(startTrace, len(storedTrace)):
+        thisLineColor = list(lineColor[n])
+
+        if not shotFired:
+            for c in range (0,3):    
+                thisLineColor[c] = thisLineColor[c] + dc[c]
+                if thisLineColor[c] > 255:
+                    thisLineColor[c] = 255
+                elif thisLineColor[c] < 0:
+                    thisLineColor[c] = 0
+            lineColor[n] = tuple(thisLineColor)
+
         cv2.line(image, storedTrace[n-1], storedTrace[n], lineColor[n], lineThickness)
 
     if recordedShotLoc:
-        cv2.circle(image, recordedShotLoc, 1, circleColor, circleThickness)
-        cv2.circle(image, recordedShotLoc, 10, circleColor, circleThickness)
+        cv2.circle(image, recordedShotLoc, 10, shotColor, -1)
     
     # display the results
     cv2.imshow("Splatt", image)
@@ -162,17 +140,8 @@ while True:
         startTrace = 1
         storedTrace = []
         recordedShotLoc = []
-        # Reset the line colours TODO: tidy this up
         lineColor = []
-        startRed = 0
-        startGreen = 255
-        startBlue = 0
-        dr = 1
-        dg = -1
-        db = 1
-        red = startRed
-        green = startGreen
-        blue = startBlue
+        shotFired = False
     
     elif keyPress & 0xFF == ord('r'):
         if not record:
