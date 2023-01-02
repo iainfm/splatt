@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 
 # video capture object
-video_capture_device = 1 # TODO: make this better
+video_capture_device = 0 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
 
 # Check the video stream started ok
@@ -18,11 +18,31 @@ radius = 41 #must be an odd number, or else GaussianBlur will fail
 # Plotting colours. TODO: vary over time
 circleColor = (0, 0, 255)
 circleThickness = 2
-lineColor = (255, 255, 0)
+lineColor = []
+
+# Line colour variance with time (frame) parameters
+startRed = 0
+startGreen = 255
+startBlue = 0
+dr = 1
+dg = -1
+db = 1
+
 lineThickness = 1
 
 # List of captured points
 storedTrace = []
+startTrace = 2
+frames = 0
+maxFrames = 255 # Max number of points/lines to plot
+
+# Initial line colours
+red = startRed
+green = startGreen
+blue = startBlue
+
+# Trigger value to detect the reference point
+minDetectionValue = 100
 
 while True:
 
@@ -41,19 +61,46 @@ while True:
 
     # Find the point of max brightness
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
+    print(maxVal)
+
+    # If minimum brightness not met skip the rest of the loop
+    if maxVal > minDetectionValue:
+
+        # Vary the line colour TODO: improve this
+        thisColour = (red, green, blue, 0)
+        lineColor.append(thisColour)
+
+        red += dr
+        green += dg
+        blue += db
+
+        if red >= 255 or red <= 0:
+            dr = -1 * dr
+
+        if green >= 255 or green <= 0:
+            dg = -1 * dg
+
+        if blue >= 255 or blue <= 0:
+            db = -1 * db
+
+        # Add the discovered point to our list
+        storedTrace.append(maxLoc)
+
+        # TODO: Decide if this is a requirement (or an option) - disappearing trace after n frames.
+        # frames += 1
+        # if frames > maxFrames:
+            #startTrace = frames - maxFrames
+
+        # add a one-off circle
+        cv2.circle(image, maxLoc, 5, circleColor, circleThickness)
+
+    # Plot the line traces so far
+    for n in range(startTrace, len(storedTrace)):
+        cv2.line(image, storedTrace[n-1], storedTrace[n], lineColor[n], lineThickness)
     
-    # Add the discovered point to our list
-    storedTrace.append(maxLoc)
-
-    # Plot the traces so far
-    for n in range(2, len(storedTrace)):
-
-        cv2.circle(image, storedTrace[n], 5, circleColor, circleThickness)
-        cv2.line(image, storedTrace[n-1], storedTrace[n], lineColor, lineThickness)
-
     # display the results
     cv2.imshow("Splatt", image)
-   
+
     if record:
         # Write the frame to the output file
         out.write(image)
