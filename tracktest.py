@@ -9,33 +9,36 @@ import cv2
 import sounddevice as sd # pip install sounddevice
 
 # video capture object
-video_capture_device = 1 # TODO: make this better
+video_capture_device = 0 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
 
 # Check the video stream started ok
 assert video_capture.isOpened()
 
-# Record session?
-record = False
+# Recording options
+record = False # (Do not set to true here)
 outfile = 'output.avi'
 
 radius = 41 # must be an odd number, or else GaussianBlur will fail
 
-# Plotting colours. TODO: vary better over time
-circleColor = (0, 0, 255) # Red
-shotColor   = (255, 0, 255) # Magenta
-circleThickness = 2
+# Plotting colours
+initLineColour = (0, 0, 255, 0) # (Blue, Green, Red)
+shotColor = (255, 0, 255) # Magenta
+shotSize = 10
+lineThickness = 2
+
+# Tuple of line colours
 lineColor = []
 
-dc = (0, 15, -15)    # Rates of colour change / frame (b, r, g)
-
-lineThickness = 2
+# Rates of colour change per frame (b, g, r)
+dC = (0, 15, -15)
 
 # List of captured points
 storedTrace = []
 startTrace = 1
 frames = 0
-maxFrames = 255 # Max number of points/lines to plot
+
+# Coordinates of the 'fired' shot
 recordedShotLoc = []
 
 # Trigger value to detect the reference point
@@ -50,9 +53,10 @@ stream = sd.Stream(
   blocksize=CHUNK)
 clickThreshold = 100 # audio level that triggers a 'shot'
 
+# Shot tracking
 shotFired = False
 
-# Start listening
+# Start listening TODO: check/assert it started
 stream.start()
 
 while True:
@@ -87,43 +91,38 @@ while True:
         else:
             circleColor = (0, 0, 255)
 
-        lineColor.append((0, 0, 255, 0)) # red
+        lineColor.append(initLineColour)
     
         # Add the discovered point to our list
         storedTrace.append(maxLoc)
-
-        # TODO: Decide if this is a requirement (or an option) - disappearing trace after n frames.
-        # frames += 1
-        # if frames > maxFrames:
-            #startTrace = frames - maxFrames
-
-        # add a one-off circle
-        # cv2.circle(image, maxLoc, 5, circleColor, circleThickness)
-
 
     # Plot the line traces so far
     for n in range(startTrace, len(storedTrace)):
         thisLineColor = list(lineColor[n])
 
         if not shotFired:
+
+            # Change the colour of the traces based on dC[]
             for c in range (0,3):    
-                thisLineColor[c] = thisLineColor[c] + dc[c]
+                thisLineColor[c] = thisLineColor[c] + dC[c]
                 if thisLineColor[c] > 255:
                     thisLineColor[c] = 255
                 elif thisLineColor[c] < 0:
                     thisLineColor[c] = 0
             lineColor[n] = tuple(thisLineColor)
 
+        # Draw a line from the previous point to this one
         cv2.line(image, storedTrace[n-1], storedTrace[n], lineColor[n], lineThickness)
 
+    # Draw the shot circle if it's been taken
     if recordedShotLoc:
-        cv2.circle(image, recordedShotLoc, 10, shotColor, -1)
+        cv2.circle(image, recordedShotLoc, shotSize, shotColor, -1)
     
     # display the results
     cv2.imshow("Splatt", image)
 
+    # Write the frame to the output file
     if record:
-        # Write the frame to the output file
         out.write(image)
 
     # Check for user input
@@ -145,7 +144,7 @@ while True:
     
     elif keyPress & 0xFF == ord('r'):
         if not record:
-            # For testing purposes, define the codec and create VideoWriter object
+            # Define the codec and create VideoWriter object
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             out = cv2.VideoWriter(outfile,fourcc, 20.0, (640,480))
             record = True
