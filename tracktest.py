@@ -97,12 +97,6 @@ while True:
         indata, overflowed = stream.read(CHUNK)
         volume_norm = np.linalg.norm(indata)*10
 
-        if volume_norm >= clickThreshold:
-            recordedShotLoc = maxLoc
-            shotFired = True
-        else:
-            circleColor = (0, 0, 255)
-
         lineColor.append(initLineColour)
     
         # Add the discovered point to our list
@@ -113,6 +107,10 @@ while True:
         thisLineColor = list(lineColor[n])
 
         if not shotFired:
+
+            if volume_norm >= clickThreshold:
+                recordedShotLoc = maxLoc
+                shotFired = True
 
             # Change the colour of the traces based on dC[]
             for c in range (0,3):    
