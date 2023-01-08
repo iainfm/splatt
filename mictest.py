@@ -1,5 +1,5 @@
 # Sandbox for testing sounddevice capture
-# python -m sounddevices
+# python -m sounddevice
 
 import sounddevice as sd # requires pip install sounddevice
 import numpy as np
