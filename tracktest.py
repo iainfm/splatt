@@ -4,9 +4,19 @@
 #   https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
 #   https://github.com/spatialaudio/python-sounddevice/issues/316
 
+#  TODO:
+#  Export of recorded data to CSV
+#  Calibration
+#  Scaling according to simulated distance
+#  Configuration (device IDs etc) - setup, store and retrieval
+
 import numpy as np       # pip install numpy / apt install python-numpy
 import cv2               # pip install opencv-python / apt install python3-opencv
 import sounddevice as sd # pip install sounddevice (requires libffi-dev)
+
+# Debug settings
+debug = False # 0 (off), 1 (info), 2 (detailed)
+debug_max = 2 # max debug level
 
 # video capture object
 video_capture_device = 1 # TODO: make this better
@@ -15,21 +25,27 @@ video_capture = cv2.VideoCapture(video_capture_device)
 # Check the video stream started ok
 assert video_capture.isOpened()
 
-video_width = video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-video_height = video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+video_width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+video_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+video_size = (video_width, video_height)
+video_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
-print(video_width , ' x ' , video_height)
+if debug > 0:
+    print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.')
 
 # Recording options
 record = False # (Do not set to true here)
 outfile = 'output.avi'
 
-radius = 41 # must be an odd number, or else GaussianBlur will fail
+# Audio and video processing options
+radius = 41             # must be an odd number, or else GaussianBlur will fail
+minDetectionValue = 50  # Trigger value to detect the reference point
+clickThreshold = 100    # audio level that triggers a 'shot'
 
 # Plotting colours and options
 initLineColour = (0, 0, 255, 0) # (Blue, Green, Red)
 shotColor = (255, 0, 255) # Magenta
-shotSize = 10
+shotSize = 10 # TODO: scale?
 lineThickness = 2
 card_colour = (147, 182, 213) # Future use
 targetFilename = "2010BM_89-18_640x480.png"
@@ -48,19 +64,16 @@ frames = 0
 # Coordinates of the 'fired' shot
 recordedShotLoc = []
 
-# Trigger value to detect the reference point
-minDetectionValue = 50
-
 # Sound capture parameters
 CHUNK = 4096
-print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config
+if debug > 0:
+    print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config
 
 stream = sd.Stream(
   device=(1, 4),
   samplerate=44100,
   channels=1,
   blocksize=CHUNK)
-clickThreshold = 100 # audio level that triggers a 'shot'
 
 # Shot tracking
 shotFired = False
@@ -68,8 +81,9 @@ shotFired = False
 # Open target png
 target = cv2.imread(targetFilename)
 
-# Start listening TODO: check/assert it started
+# Start listening and check it started
 stream.start()
+assert stream.active
 
 while True:
 
@@ -88,7 +102,9 @@ while True:
 
     # Find the point of max brightness
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-    # print(maxVal)
+
+    if debug > 1:
+        print(maxVal)
 
     # If minimum brightness not met skip the rest of the loop
     if maxVal > minDetectionValue:
@@ -96,11 +112,10 @@ while True:
         # Check for click
         indata, overflowed = stream.read(CHUNK)
         volume_norm = np.linalg.norm(indata)*10
-
-        lineColor.append(initLineColour)
-    
-        # Add the discovered point to our list
+        
+        # Add the discovered point to our list with the initial line colour
         storedTrace.append(maxLoc)
+        lineColor.append(initLineColour)
 
     # Plot the line traces so far
     for n in range(startTrace, len(storedTrace)):
@@ -154,8 +169,16 @@ while True:
         target = cv2.imread(targetFilename)
     
     elif keyPress & 0xFF == ord('r'):
+        # Record the output as a movie
         if not record:
             # Define the codec and create VideoWriter object
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            out = cv2.VideoWriter(outfile,fourcc, 20.0, (640,480))
+            out = cv2.VideoWriter(outfile, fourcc, video_fps, video_size)
             record = True
+    
+    elif keyPress & 0xFF == ord('d'):
+        # Increase debug level
+        debug += 1
+        if debug > debug_max:
+            debug = False
+        print('Debug level:', int(debug))
