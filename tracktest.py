@@ -44,14 +44,14 @@ clickThreshold = 100    # audio level that triggers a 'shot'
 
 # Plotting colours and options
 initLineColour = (0, 0, 255, 0) # (Blue, Green, Red)
-shotColor = (255, 0, 255) # Magenta
+shotColour = (255, 0, 255) # Magenta
 shotSize = 10 # TODO: scale?
 lineThickness = 2
 card_colour = (147, 182, 213) # Future use
 targetFilename = "2010BM_89-18_640x480.png"
 
 # Tuple of line colours
-lineColor = []
+lineColour = []
 
 # Rates of colour change per frame (b, g, r)
 dC = (0, 15, -15)
@@ -118,11 +118,11 @@ while True:
         
         # Add the discovered point to our list with the initial line colour
         storedTrace.append((maxLoc[0] + calib_XY[0], maxLoc[1] + calib_XY[1]))
-        lineColor.append(initLineColour)
+        lineColour.append(initLineColour)
 
     # Plot the line traces so far
     for n in range(startTrace, len(storedTrace)):
-        thisLineColor = list(lineColor[n])
+        thisLineColour = list(lineColour[n])
 
         if not shotFired:
 
@@ -132,19 +132,19 @@ while True:
 
             # Change the colour of the traces based on dC[]
             for c in range (0,3):
-                thisLineColor[c] = thisLineColor[c] + dC[c]
-                if thisLineColor[c] > 255:
-                    thisLineColor[c] = 255
-                elif thisLineColor[c] < 0:
-                    thisLineColor[c] = 0
-            lineColor[n] = tuple(thisLineColor)
+                thisLineColour[c] = thisLineColour[c] + dC[c]
+                if thisLineColour[c] > 255:
+                    thisLineColour[c] = 255
+                elif thisLineColour[c] < 0:
+                    thisLineColour[c] = 0
+            lineColour[n] = tuple(thisLineColour)
 
         # Draw a line from the previous point to this one
-        cv2.line(target, storedTrace[n-1], storedTrace[n], lineColor[n], lineThickness)
+        cv2.line(target, storedTrace[n-1], storedTrace[n], lineColour[n], lineThickness)
 
     # Draw the shot circle if it's been taken
     if recordedShotLoc:
-        cv2.circle(target, recordedShotLoc, shotSize, shotColor, -1)
+        cv2.circle(target, recordedShotLoc, shotSize, shotColour, -1)
     
     # display the results
     cv2.imshow("Splatt", target)
@@ -169,7 +169,7 @@ while True:
         startTrace = 1
         storedTrace = []
         recordedShotLoc = []
-        lineColor = []
+        lineColour = []
         shotFired = False
         target = cv2.imread(targetFilename)
     
