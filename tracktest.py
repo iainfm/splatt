@@ -131,7 +131,7 @@ while True:
                 shotFired = True
 
             # Change the colour of the traces based on dC[]
-            for c in range (0,3):    
+            for c in range (0,3):
                 thisLineColor[c] = thisLineColor[c] + dC[c]
                 if thisLineColor[c] > 255:
                     thisLineColor[c] = 255
