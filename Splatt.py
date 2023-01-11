@@ -6,13 +6,14 @@
 
 #  TODO:
 #  Export of recorded data to CSV
-#  Auto-calibration
+#  Auto-calibration (done)
 #  Scaling according to simulated distance
 #  Configuration (device IDs etc) - setup, store and retrieval
 
 import numpy as np       # pip install numpy / apt install python-numpy
 import cv2               # pip install opencv-python / apt install python3-opencv
 import sounddevice as sd # pip install sounddevice (requires libffi-dev)
+import random
 
 # Debug settings
 debug_level = False # 0 (off), 1 (info), 2 (detailed)
@@ -36,6 +37,7 @@ if debug_level > 0:
 # Recording options
 record_video = False # (Do not set to true here)
 video_output_file = 'output.avi'
+composite_output_file = 'composite.png'
 
 # Audio and video processing options
 blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
@@ -57,6 +59,7 @@ line_colour = []
 # List of captured points
 stored_trace = []
 start_trace = 1
+shots_fired = -1 # The 0th is the calibration shot TODO: reset on keypress
 
 # Coordinates of the 'fired' shot
 recorded_shot_loc = []
@@ -79,8 +82,9 @@ audio_stream = sd.Stream(
 shot_fired = False
 first_shot = True
 
-# Open target png
+# Open target png for current and composite images
 target_image = cv2.imread(target_filename)
+composite_image = cv2.imread(target_filename)
 
 # Start listening and check it started
 audio_stream.start()
@@ -90,7 +94,7 @@ assert audio_stream.active
 
 def initialise_trace():
     # Clear the trace and reload target_image
-    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image
+    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image
     start_trace = 1
     stored_trace = []
     recorded_shot_loc = []
@@ -147,6 +151,7 @@ while True:
                 
                 recorded_shot_loc = (max_loc[0] + calib_XY[0], max_loc[1] + calib_XY[1])
                 shot_fired = True
+                shots_fired += 1
 
             # Change the colour of the traces based on colour_change_rate[]
             for c in range (0,3):
@@ -163,6 +168,21 @@ while True:
     # Draw the shot circle if it's been taken
     if recorded_shot_loc:
         cv2.circle(target_image, recorded_shot_loc, shot_size, shot_colour, -1)
+        if not first_shot:
+            composite_colour = (random.randint(1,255), random.randint(1,255), random.randint(1,255))
+            cv2.circle(composite_image, recorded_shot_loc, shot_size, composite_colour, line_thickness)
+            
+            font = cv2.FONT_HERSHEY_PLAIN
+            font_scale = 2
+            font_thickness = 2
+            line_type = 2
+
+            cv2.putText(composite_image, str(shots_fired), 
+                (int(recorded_shot_loc[0] - (shot_size / 2)), int(recorded_shot_loc[1] + (shot_size / 2))),
+                font, font_scale, composite_colour, font_thickness, line_type)
+
+        # Remember to do anything else required with the recorded shot location here (eg csv output)
+        recorded_shot_loc = ()
 
         if first_shot:
             # Calibrate the system and clear the results
@@ -171,7 +191,9 @@ while True:
             first_shot = False
     
     # display the results
-    cv2.imshow("Splatt", target_image)
+    cv2.imshow("Splatt - Live Trace", target_image)
+    cv2.imshow("Splatt - Composite", composite_image)
+
     if debug_level > 0:
         cv2.imshow("Splatt - Grey", grey_image)
 
@@ -212,3 +234,7 @@ while True:
     elif key_press == ord('r'):
         # Reset for recalibration
         first_shot = True
+
+    elif key_press == ord('s'):
+        # Save the composite image (and clear it?)
+        cv2.imwrite(composite_output_file, composite_image)
