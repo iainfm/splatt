@@ -6,7 +6,7 @@
 
 #  TODO:
 #  Export of recorded data to CSV
-#  Calibration
+#  Auto-calibration
 #  Scaling according to simulated distance
 #  Configuration (device IDs etc) - setup, store and retrieval
 
@@ -38,7 +38,7 @@ record = False # (Do not set to true here)
 outfile = 'output.avi'
 
 # Audio and video processing options
-radius = 41             # must be an odd number, or else GaussianBlur will fail
+radius = 11             # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
 minDetectionValue = 50  # Trigger value to detect the reference point
 clickThreshold = 100    # audio level that triggers a 'shot'
 
@@ -63,6 +63,9 @@ frames = 0
 
 # Coordinates of the 'fired' shot
 recordedShotLoc = []
+
+# Calibration / scaling
+calib_XY = (0, 0)
 
 # Sound capture parameters
 CHUNK = 4096
@@ -104,7 +107,7 @@ while True:
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
 
     if debug > 1:
-        print(maxVal)
+        print(maxVal, '@', maxLoc)
 
     # If minimum brightness not met skip the rest of the loop
     if maxVal > minDetectionValue:
@@ -114,7 +117,7 @@ while True:
         volume_norm = np.linalg.norm(indata)*10
         
         # Add the discovered point to our list with the initial line colour
-        storedTrace.append(maxLoc)
+        storedTrace.append((maxLoc[0] + calib_XY[0], maxLoc[1] + calib_XY[1]))
         lineColor.append(initLineColour)
 
     # Plot the line traces so far
@@ -145,6 +148,8 @@ while True:
     
     # display the results
     cv2.imshow("Splatt", target)
+    if debug > 0:
+        cv2.imshow("Splatt - Grey", gray)
 
     # Write the frame to the output file
     if record:
@@ -182,3 +187,10 @@ while True:
         if debug > debug_max:
             debug = False
         print('Debug level:', int(debug))
+
+    elif keyPress & 0xFF == ord('k'):
+        # Calibrate offset to point source
+        # TODO: do this on the first shot? Clear trace after calibration?
+        calib_XY = (int((video_width / 2) - maxLoc[0]), int((video_height / 2) - maxLoc[1]))
+        if debug > 0:
+            print(calib_XY)
