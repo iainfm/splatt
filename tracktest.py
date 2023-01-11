@@ -1,5 +1,7 @@
 # Splatt! Target shooting training system
 
+# THIS FILE IS NO LONGER MAINTAINED. USE Splatt.py
+
 # References:
 #   https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
 #   https://github.com/spatialaudio/python-sounddevice/issues/316
@@ -186,6 +188,7 @@ while True:
         # Quit
         video_capture.release()
         audio_stream.close()
+        # TODO: close video file if open as well?
         break
 
     elif key_press == ord('c'):
