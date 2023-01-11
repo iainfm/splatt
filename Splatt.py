@@ -169,7 +169,7 @@ while True:
     if recorded_shot_loc:
         cv2.circle(target_image, recorded_shot_loc, shot_size, shot_colour, -1)
         if not first_shot:
-            composite_colour = (random.randint(1,255), random.randint(1,255), random.randint(1,255))
+            composite_colour = (random.randint(127, 255), random.randint(127, 255), random.randint(127, 255))
             cv2.circle(composite_image, recorded_shot_loc, shot_size, composite_colour, line_thickness)
             
             font = cv2.FONT_HERSHEY_PLAIN
