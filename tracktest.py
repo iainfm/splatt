@@ -98,13 +98,13 @@ while True:
     image = cv2.flip(image, -1)
 
     # grey-ify the image
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # apply a Gaussian blur to the image then find the brightest region
-    gray = cv2.GaussianBlur(gray, (radius, radius), 0)
+    grey = cv2.GaussianBlur(grey, (radius, radius), 0)
 
     # Find the point of max brightness
-    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
+    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(grey)
 
     if debug > 1:
         print(maxVal, '@', maxLoc)
@@ -149,7 +149,7 @@ while True:
     # display the results
     cv2.imshow("Splatt", target)
     if debug > 0:
-        cv2.imshow("Splatt - Grey", gray)
+        cv2.imshow("Splatt - Grey", grey)
 
     # Write the frame to the output file
     if record:
