@@ -45,7 +45,7 @@ click_threshold = 100     # audio level that triggers a 'shot'
 # Plotting colours and options
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
 shot_colour = (255, 0, 255)       # Magenta
-shot_size = 10                    # TODO: scale?
+shot_size = 20                    # TODO: scale?
 line_thickness = 2
 card_colour = (147, 182, 213)     # Future use
 target_filename = "2010BM_89-18_640x480.png"
@@ -77,6 +77,7 @@ audio_stream = sd.Stream(
 
 # Shot tracking
 shot_fired = False
+first_shot = True
 
 # Open target png
 target_image = cv2.imread(target_filename)
@@ -96,6 +97,13 @@ def initialise_trace():
     line_colour = []
     shot_fired = False
     target_image = cv2.imread(target_filename)
+
+def calibrate_offset():
+    # Calibrate offset to point source
+    global calib_XY
+    calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
+    if debug_level > 0:
+        print(calib_XY)
 
 while True:
 
@@ -136,6 +144,7 @@ while True:
         if not shot_fired:
 
             if volume_norm >= click_threshold:
+                
                 recorded_shot_loc = (max_loc[0] + calib_XY[0], max_loc[1] + calib_XY[1])
                 shot_fired = True
 
@@ -154,6 +163,12 @@ while True:
     # Draw the shot circle if it's been taken
     if recorded_shot_loc:
         cv2.circle(target_image, recorded_shot_loc, shot_size, shot_colour, -1)
+
+        if first_shot:
+            # Calibrate the system and clear the results
+            calibrate_offset()
+            initialise_trace()
+            first_shot = False
     
     # display the results
     cv2.imshow("Splatt", target_image)
@@ -177,7 +192,7 @@ while True:
         # Clear the trace
         initialise_trace()
     
-    elif key_press == ord('r'):
+    elif key_press == ord('v'):
         # Record the output as a movie
         if not record_video:
             # Define the codec and create VideoWriter object
@@ -192,11 +207,7 @@ while True:
         if debug_level > debug_max:
             debug_level = False
         print('Debug level:', int(debug_level))
-
-    elif key_press == ord('k'):
-        # Calibrate offset to point source
-        # TODO: do this on the first shot?
-        initialise_trace()
-        calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
-        if debug_level > 0:
-            print(calib_XY)
+    
+    elif key_press == ord('r'):
+        # Reset for recalibration
+        first_shot = True
