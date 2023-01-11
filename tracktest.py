@@ -15,7 +15,7 @@ import cv2               # pip install opencv-python / apt install python3-openc
 import sounddevice as sd # pip install sounddevice (requires libffi-dev)
 
 # Debug settings
-debug = False # 0 (off), 1 (info), 2 (detailed)
+debug_level = False # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2 # max debug level
 
 # video capture object
@@ -30,167 +30,173 @@ video_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 video_size = (video_width, video_height)
 video_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
-if debug > 0:
+if debug_level > 0:
     print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.')
 
 # Recording options
-record = False # (Do not set to true here)
-outfile = 'output.avi'
+record_video = False # (Do not set to true here)
+video_output_file = 'output.avi'
 
 # Audio and video processing options
-radius = 11             # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
-minDetectionValue = 50  # Trigger value to detect the reference point
-clickThreshold = 100    # audio level that triggers a 'shot'
+blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
+min_detection_value = 50  # Trigger value to detect the reference point
+click_threshold = 100     # audio level that triggers a 'shot'
 
 # Plotting colours and options
-initLineColour = (0, 0, 255, 0) # (Blue, Green, Red)
-shotColour = (255, 0, 255) # Magenta
-shotSize = 10 # TODO: scale?
-lineThickness = 2
-card_colour = (147, 182, 213) # Future use
-targetFilename = "2010BM_89-18_640x480.png"
+init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
+shot_colour = (255, 0, 255)       # Magenta
+shot_size = 10                    # TODO: scale?
+line_thickness = 2
+card_colour = (147, 182, 213)     # Future use
+target_filename = "2010BM_89-18_640x480.png"
+colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 
 # Tuple of line colours
-lineColour = []
-
-# Rates of colour change per frame (b, g, r)
-dC = (0, 15, -15)
+line_colour = []
 
 # List of captured points
-storedTrace = []
-startTrace = 1
-frames = 0
+stored_trace = []
+start_trace = 1
 
 # Coordinates of the 'fired' shot
-recordedShotLoc = []
+recorded_shot_loc = []
 
 # Calibration / scaling
 calib_XY = (0, 0)
 
 # Sound capture parameters
-CHUNK = 4096
-if debug > 0:
+audio_chunk_size = 4096
+if debug_level > 0:
     print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config
 
-stream = sd.Stream(
-  device=(1, 4),
-  samplerate=44100,
-  channels=1,
-  blocksize=CHUNK)
+audio_stream = sd.Stream(
+  device = (1, 4),
+  samplerate = 44100,
+  channels = 1,
+  blocksize = audio_chunk_size)
 
 # Shot tracking
-shotFired = False
+shot_fired = False
 
 # Open target png
-target = cv2.imread(targetFilename)
+target_image = cv2.imread(target_filename)
 
 # Start listening and check it started
-stream.start()
-assert stream.active
+audio_stream.start()
+assert audio_stream.active
+
+# Functions
+
+def initialise_trace():
+    # Clear the trace and reload target_image
+    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image
+    start_trace = 1
+    stored_trace = []
+    recorded_shot_loc = []
+    line_colour = []
+    shot_fired = False
+    target_image = cv2.imread(target_filename)
 
 while True:
 
     # Get the video frame
-    ret, frame = video_capture.read()
-    image = frame.copy()
+    video_ret, video_frame = video_capture.read()
+    captured_image = video_frame.copy()
 
     # Flip the image in both axes to get the position relative to the target correct
-    image = cv2.flip(image, -1)
+    captured_image = cv2.flip(captured_image, -1)
 
     # grey-ify the image
-    grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
 
     # apply a Gaussian blur to the image then find the brightest region
-    grey = cv2.GaussianBlur(grey, (radius, radius), 0)
+    grey_image = cv2.GaussianBlur(grey_image, (blur_radius, blur_radius), 0)
 
     # Find the point of max brightness
-    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(grey)
+    (min_brightness, max_brightness, min_loc, max_loc) = cv2.minMaxLoc(grey_image)
 
-    if debug > 1:
-        print(maxVal, '@', maxLoc)
+    if debug_level > 1:
+        print(max_brightness, '@', max_loc)
 
     # If minimum brightness not met skip the rest of the loop
-    if maxVal > minDetectionValue:
+    if max_brightness > min_detection_value:
 
         # Check for click
-        indata, overflowed = stream.read(CHUNK)
-        volume_norm = np.linalg.norm(indata)*10
+        audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
+        volume_norm = np.linalg.norm(audio_data)*10
         
         # Add the discovered point to our list with the initial line colour
-        storedTrace.append((maxLoc[0] + calib_XY[0], maxLoc[1] + calib_XY[1]))
-        lineColour.append(initLineColour)
+        stored_trace.append((max_loc[0] + calib_XY[0], max_loc[1] + calib_XY[1]))
+        line_colour.append(init_line_colour)
 
     # Plot the line traces so far
-    for n in range(startTrace, len(storedTrace)):
-        thisLineColour = list(lineColour[n])
+    for n in range(start_trace, len(stored_trace)):
+        this_line_colour = list(line_colour[n])
 
-        if not shotFired:
+        if not shot_fired:
 
-            if volume_norm >= clickThreshold:
-                recordedShotLoc = (maxLoc[0] + calib_XY[0], maxLoc[1] + calib_XY[1])
-                shotFired = True
+            if volume_norm >= click_threshold:
+                recorded_shot_loc = (max_loc[0] + calib_XY[0], max_loc[1] + calib_XY[1])
+                shot_fired = True
 
-            # Change the colour of the traces based on dC[]
+            # Change the colour of the traces based on colour_change_rate[]
             for c in range (0,3):
-                thisLineColour[c] = thisLineColour[c] + dC[c]
-                if thisLineColour[c] > 255:
-                    thisLineColour[c] = 255
-                elif thisLineColour[c] < 0:
-                    thisLineColour[c] = 0
-            lineColour[n] = tuple(thisLineColour)
+                this_line_colour[c] = this_line_colour[c] + colour_change_rate[c]
+                if this_line_colour[c] > 255:
+                    this_line_colour[c] = 255
+                elif this_line_colour[c] < 0:
+                    this_line_colour[c] = 0
+            line_colour[n] = tuple(this_line_colour)
 
         # Draw a line from the previous point to this one
-        cv2.line(target, storedTrace[n-1], storedTrace[n], lineColour[n], lineThickness)
+        cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
 
     # Draw the shot circle if it's been taken
-    if recordedShotLoc:
-        cv2.circle(target, recordedShotLoc, shotSize, shotColour, -1)
+    if recorded_shot_loc:
+        cv2.circle(target_image, recorded_shot_loc, shot_size, shot_colour, -1)
     
     # display the results
-    cv2.imshow("Splatt", target)
-    if debug > 0:
-        cv2.imshow("Splatt - Grey", grey)
+    cv2.imshow("Splatt", target_image)
+    if debug_level > 0:
+        cv2.imshow("Splatt - Grey", grey_image)
 
     # Write the frame to the output file
-    if record:
-        out.write(target)
+    if record_video:
+        video_out.write(target_image)
 
     # Check for user input
-    keyPress = cv2.waitKey(1)
+    key_press = cv2.waitKey(1) & 0xFF
     
-    if keyPress & 0xFF == ord('q'):
+    if key_press == ord('q'):
         # Quit
         video_capture.release()
-        stream.close()
+        audio_stream.close()
         break
 
-    elif keyPress & 0xFF == ord('c'):
+    elif key_press == ord('c'):
         # Clear the trace
-        startTrace = 1
-        storedTrace = []
-        recordedShotLoc = []
-        lineColour = []
-        shotFired = False
-        target = cv2.imread(targetFilename)
+        initialise_trace()
     
-    elif keyPress & 0xFF == ord('r'):
+    elif key_press == ord('r'):
         # Record the output as a movie
-        if not record:
+        if not record_video:
             # Define the codec and create VideoWriter object
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            out = cv2.VideoWriter(outfile, fourcc, video_fps, video_size)
-            record = True
+            four_cc = cv2.VideoWriter_fourcc(*'XVID')
+            video_out = cv2.VideoWriter(video_output_file, four_cc, video_fps, video_size)
+            record_video = True
+            print('Recording started. Output file:', video_output_file)
     
-    elif keyPress & 0xFF == ord('d'):
+    elif key_press == ord('d'):
         # Increase debug level
-        debug += 1
-        if debug > debug_max:
-            debug = False
-        print('Debug level:', int(debug))
+        debug_level += 1
+        if debug_level > debug_max:
+            debug_level = False
+        print('Debug level:', int(debug_level))
 
-    elif keyPress & 0xFF == ord('k'):
+    elif key_press == ord('k'):
         # Calibrate offset to point source
-        # TODO: do this on the first shot? Clear trace after calibration?
-        calib_XY = (int((video_width / 2) - maxLoc[0]), int((video_height / 2) - maxLoc[1]))
-        if debug > 0:
+        # TODO: do this on the first shot?
+        initialise_trace()
+        calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
+        if debug_level > 0:
             print(calib_XY)
