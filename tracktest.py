@@ -127,7 +127,7 @@ while True:
         if not shotFired:
 
             if volume_norm >= clickThreshold:
-                recordedShotLoc = maxLoc
+                recordedShotLoc = (maxLoc[0] + calib_XY[0], maxLoc[1] + calib_XY[1])
                 shotFired = True
 
             # Change the colour of the traces based on dC[]
