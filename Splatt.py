@@ -6,7 +6,6 @@
 
 #  TODO:
 #  Export of recorded data to CSV
-#  Auto-calibration (done)
 #  Scaling according to simulated distance
 #  Configuration (device IDs etc) - setup, store and retrieval
 
@@ -16,12 +15,23 @@ import sounddevice as sd # pip install sounddevice (requires libffi-dev)
 import random
 
 # Debug settings
-debug_level = False # 0 (off), 1 (info), 2 (detailed)
-debug_max = 2 # max debug level
+debug_level =  0 # 0 (off), 1 (info), 2 (detailed)
+debug_max = 2    # max debug level
+
+# Virtual shooting range (TODO: implement scaling)
+simulated_range_length = 25 # yards (doesn't matter as long
+real_range_length = 4       # as unit are the same)
+scale_factor = simulated_range_length / real_range_length
+
+# Target dimensions
+target_name = '25 yard prone'
+target_diameter = 51.39 # mm
+target_filename = '2010BM_89-18_to.png'
 
 # video capture object
 video_capture_device = 1 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
+captured_image_flip_needed = False # Whether the camera is mounted upside down
 
 # Check the video stream started ok
 assert video_capture.isOpened()
@@ -49,8 +59,8 @@ init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
 shot_colour = (255, 0, 255)       # Magenta
 shot_size = 20                    # TODO: scale?
 line_thickness = 2
-card_colour = (147, 182, 213)     # Future use
-target_filename = "2010BM_89-18_640x480.png"
+
+# target_filename = "2010BM_89-18_640x480.png"
 colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 
 # Tuple of line colours
@@ -82,9 +92,31 @@ audio_stream = sd.Stream(
 shot_fired = False
 first_shot = True
 
-# Open target png for current and composite images
-target_image = cv2.imread(target_filename)
-composite_image = cv2.imread(target_filename)
+# Open target png  and create target_image and composite_image based on video frame size
+target_file_image = cv2.imread(target_filename)
+
+if ( target_file_image.shape[0] != target_file_image.shape[1]):
+    # Target image should be square
+    print('Warning: Target image is not square')
+
+# Resize the target image to fit the video frame
+target_file_image = cv2.resize(target_file_image, (video_height, video_height))
+
+# Create a new blank target image
+blank_target_image = np.zeros([video_height, video_width, 3], dtype = np.uint8)
+
+# And colour it the same as the bottom-left (is it?) pixel of the target file
+blank_target_image[:, :] = target_file_image[0:1, 0:1]
+
+# Calculate the horizontal offset for centering the target image within the frame
+target_offset = int(blank_target_image.shape[1]/2 - target_file_image.shape[1]/2)
+
+# Copy the target file into the blank target image
+blank_target_image[0:target_file_image.shape[1], target_offset:target_file_image.shape[0] + target_offset] = target_file_image
+
+# Copy the blank target image to the two images we use for display
+target_image = blank_target_image.copy()
+composite_image = blank_target_image.copy()
 
 # Start listening and check it started
 audio_stream.start()
@@ -101,6 +133,7 @@ def initialise_trace():
     line_colour = []
     shot_fired = False
     target_image = cv2.imread(target_filename)
+    target_image = blank_target_image.copy()
 
 def calibrate_offset():
     # Calibrate offset to point source
@@ -115,8 +148,10 @@ while True:
     video_ret, video_frame = video_capture.read()
     captured_image = video_frame.copy()
 
-    # Flip the image in both axes to get the position relative to the target correct
-    captured_image = cv2.flip(captured_image, -1)
+    # If set, flip the image
+    if captured_image_flip_needed:
+        captured_image = cv2.flip(captured_image, -1)
+        #captured_image = cv2.flip(captured_image, 1)
 
     # grey-ify the image
     grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
@@ -138,7 +173,20 @@ while True:
         volume_norm = np.linalg.norm(audio_data)*10
         
         # Add the discovered point to our list with the initial line colour
-        stored_trace.append((max_loc[0] + calib_XY[0], max_loc[1] + calib_XY[1]))
+        max_loc_x = int(( max_loc[0] + calib_XY[0] ) ) # TODO: Figure out the maths
+        max_loc_y = int(( max_loc[1] + calib_XY[1] ) ) # TODO: Figure out the maths
+
+        if max_loc_x < 0:
+            max_loc_x = 0
+        elif max_loc_x > video_width:
+            max_loc_x = video_width
+
+        if max_loc_y < 0:
+            max_loc_y = 0
+        elif max_loc_y > video_height:
+            max_loc_y = video_height
+            
+        stored_trace.append((max_loc_x, max_loc_y))
         line_colour.append(init_line_colour)
 
     # Plot the line traces so far
@@ -238,3 +286,8 @@ while True:
     elif key_press == ord('s'):
         # Save the composite image (and clear it?)
         cv2.imwrite(composite_output_file, composite_image)
+    
+    elif key_press == ord('f'):
+        # Change the flip mode
+        captured_image_flip_needed = not captured_image_flip_needed
+        print('Flip required:', captured_image_flip_needed)
