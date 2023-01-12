@@ -15,13 +15,14 @@ import sounddevice as sd # pip install sounddevice (requires libffi-dev)
 import random
 
 # Debug settings
-debug_level =  0 # 0 (off), 1 (info), 2 (detailed)
-debug_max = 2    # max debug level
+debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
+debug_max = 2     # max debug level
 
 # Virtual shooting range (TODO: implement scaling)
 simulated_range_length = 25 # yards (doesn't matter as long
 real_range_length = 4       # as unit are the same)
 scale_factor = simulated_range_length / real_range_length
+shot_calibre = 5.6          # mm (0.22")
 
 # Target dimensions
 target_name = '25 yard prone'
@@ -41,6 +42,8 @@ video_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 video_size = (video_width, video_height)
 video_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
+scaled_shot_radius = int(0.5 * shot_calibre * video_height / target_diameter)
+
 if debug_level > 0:
     print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.')
 
@@ -57,7 +60,6 @@ click_threshold = 100     # audio level that triggers a 'shot'
 # Plotting colours and options
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
 shot_colour = (255, 0, 255)       # Magenta
-shot_size = 20                    # TODO: scale?
 line_thickness = 2
 
 # target_filename = "2010BM_89-18_640x480.png"
@@ -151,7 +153,6 @@ while True:
     # If set, flip the image
     if captured_image_flip_needed:
         captured_image = cv2.flip(captured_image, -1)
-        #captured_image = cv2.flip(captured_image, 1)
 
     # grey-ify the image
     grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
@@ -170,7 +171,7 @@ while True:
 
         # Check for click
         audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
-        volume_norm = np.linalg.norm(audio_data)*10
+        volume_norm = np.linalg.norm(audio_data) * 10
         
         # Add the discovered point to our list with the initial line colour
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) ) # TODO: Figure out the maths
@@ -215,18 +216,20 @@ while True:
 
     # Draw the shot circle if it's been taken
     if recorded_shot_loc:
-        cv2.circle(target_image, recorded_shot_loc, shot_size, shot_colour, -1)
+        cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
+
         if not first_shot:
-            composite_colour = (random.randint(127, 255), random.randint(127, 255), random.randint(127, 255))
-            cv2.circle(composite_image, recorded_shot_loc, shot_size, composite_colour, line_thickness)
+            composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(1, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
+            cv2.circle(composite_image, recorded_shot_loc, scaled_shot_radius, composite_colour, line_thickness)
             
             font = cv2.FONT_HERSHEY_PLAIN
             font_scale = 2
             font_thickness = 2
             line_type = 2
 
+            # TODO: This needs to be improved, ideally by finding the bounding box of the shot number being plotted.
             cv2.putText(composite_image, str(shots_fired), 
-                (int(recorded_shot_loc[0] - (shot_size / 2)), int(recorded_shot_loc[1] + (shot_size / 2))),
+                (int(recorded_shot_loc[0] - (scaled_shot_radius / 2)), int(recorded_shot_loc[1] + (scaled_shot_radius / 2))),
                 font, font_scale, composite_colour, font_thickness, line_type)
 
         # Remember to do anything else required with the recorded shot location here (eg csv output)
@@ -239,7 +242,7 @@ while True:
             first_shot = False
     
     # display the results
-    cv2.imshow("Splatt - Live Trace", target_image)
+    cv2.imshow("Splatt - Live trace", target_image)
     cv2.imshow("Splatt - Composite", composite_image)
 
     if debug_level > 0:
