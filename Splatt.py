@@ -26,7 +26,7 @@ scale_factor = simulated_range_length / real_range_length
 # Target dimensions
 target_name = '25 yard prone'
 target_diameter = 51.39 # mm
-target_filename = '2010BM_89-18_to.png'
+target_filename = '1989 25yard Outward Gauging.png'
 
 # video capture object
 video_capture_device = 1 # TODO: make this better
@@ -106,7 +106,7 @@ target_file_image = cv2.resize(target_file_image, (video_height, video_height))
 blank_target_image = np.zeros([video_height, video_width, 3], dtype = np.uint8)
 
 # And colour it the same as the bottom-left (is it?) pixel of the target file
-blank_target_image[:, :] = target_file_image[0:1, 0:1]
+blank_target_image[:, :] = target_file_image[1:2, 1:2]
 
 # Calculate the horizontal offset for centering the target image within the frame
 target_offset = int(blank_target_image.shape[1]/2 - target_file_image.shape[1]/2)
