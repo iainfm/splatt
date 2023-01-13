@@ -9,20 +9,26 @@
 #  Scaling according to simulated distance
 #  Configuration (device IDs etc) - setup, store and retrieval
 
+print('Splatt initialising...')
+
 import numpy as np       # pip install numpy / apt install python-numpy
 import cv2               # pip install opencv-python / apt install python3-opencv
 import sounddevice as sd # pip install sounddevice (requires libffi-dev)
 import random
+from time import time
 
 # Debug settings
 debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
-# Virtual shooting range (TODO: implement scaling)
+# Virtual shooting range and session options
 simulated_range_length = 25 # yards (doesn't matter as long
 real_range_length = 5       # as unit are the same)
 scale_factor = simulated_range_length / real_range_length
 shot_calibre = 5.6          # mm (0.22")
+session_name = '25 yard prone practice 13/01/23'
+auto_reset = True           # reset after shot taken
+auto_reset_time = 5         # Number of seconds after the shot before resetting
 
 # Target dimensions
 target_name = '25 yard prone'
@@ -61,17 +67,14 @@ click_threshold = 100     # audio level that triggers a 'shot'
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
 shot_colour = (255, 0, 255)       # Magenta
 line_thickness = 2
-
-# target_filename = "2010BM_89-18_640x480.png"
 colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 
-# Tuple of line colours
+# Initialise tuples and variables
 line_colour = []
-
-# List of captured points
 stored_trace = []
 start_trace = 1
 shots_fired = -1 # The 0th is the calibration shot TODO: reset on keypress
+auto_reset_time_expired = False
 
 # Coordinates of the 'fired' shot
 recorded_shot_loc = []
@@ -128,7 +131,7 @@ assert audio_stream.active
 
 def initialise_trace():
     # Clear the trace and reload target_image
-    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image
+    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, auto_reset_time_expired
     start_trace = 1
     stored_trace = []
     recorded_shot_loc = []
@@ -136,6 +139,7 @@ def initialise_trace():
     shot_fired = False
     target_image = cv2.imread(target_filename)
     target_image = blank_target_image.copy()
+    auto_reset_time_expired = False
 
 def calibrate_offset():
     # Calibrate offset to point source
@@ -206,11 +210,12 @@ while True:
 
         if not shot_fired:
 
+            # Check audio levels TODO: FFT analysis
             if volume_norm >= click_threshold:
-                
                 recorded_shot_loc = max_loc
                 shot_fired = True
                 shots_fired += 1
+                shot_time = time() + auto_reset_time
 
             # Change the colour of the traces based on colour_change_rate[]
             for c in range (0,3):
@@ -220,6 +225,10 @@ while True:
                 elif this_line_colour[c] < 0:
                     this_line_colour[c] = 0
             line_colour[n] = tuple(this_line_colour)
+        else:
+            # print(shot_time - time())
+            if time() > shot_time:
+                auto_reset_time_expired = True
 
         # Draw a line from the previous point to this one
         cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
@@ -250,7 +259,7 @@ while True:
             calibrate_offset()
             initialise_trace()
             first_shot = False
-    
+            
     # display the results
     cv2.imshow("Splatt - Live trace", target_image)
     cv2.imshow("Splatt - Composite", composite_image)
@@ -261,6 +270,9 @@ while True:
     # Write the frame to the output file
     if record_video:
         video_out.write(target_image)
+
+    if auto_reset_time_expired:
+        initialise_trace()
 
     # Check for user input
     key_press = cv2.waitKey(1) & 0xFF
