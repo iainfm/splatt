@@ -20,7 +20,7 @@ debug_max = 2     # max debug level
 
 # Virtual shooting range (TODO: implement scaling)
 simulated_range_length = 25 # yards (doesn't matter as long
-real_range_length = 4       # as unit are the same)
+real_range_length = 10      # as unit are the same)
 scale_factor = simulated_range_length / real_range_length
 shot_calibre = 5.6          # mm (0.22")
 
@@ -177,15 +177,21 @@ while True:
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) ) # TODO: Figure out the maths
         max_loc_y = int(( max_loc[1] + calib_XY[1] ) ) # TODO: Figure out the maths
 
-        if max_loc_x < 0:
-            max_loc_x = 0
-        elif max_loc_x > video_width:
-            max_loc_x = video_width
+        if not first_shot:
+            # Scale based on the virtual / real range distances
+            max_loc_x = int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 )
+            max_loc_y = int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 )
 
-        if max_loc_y < 0:
-            max_loc_y = 0
-        elif max_loc_y > video_height:
-            max_loc_y = video_height
+            if max_loc_x < 0:
+                max_loc_x = 0
+            elif max_loc_x > video_width:
+                max_loc_x = video_width
+
+            if max_loc_y < 0:
+                max_loc_y = 0
+            elif max_loc_y > video_height:
+                max_loc_y = video_height
+            max_loc = (max_loc_x, max_loc_y)
             
         stored_trace.append((max_loc_x, max_loc_y))
         line_colour.append(init_line_colour)
