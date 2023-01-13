@@ -20,7 +20,7 @@ debug_max = 2     # max debug level
 
 # Virtual shooting range (TODO: implement scaling)
 simulated_range_length = 25 # yards (doesn't matter as long
-real_range_length = 10      # as unit are the same)
+real_range_length = 5       # as unit are the same)
 scale_factor = simulated_range_length / real_range_length
 shot_calibre = 5.6          # mm (0.22")
 
@@ -173,15 +173,16 @@ while True:
         audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
         volume_norm = np.linalg.norm(audio_data) * 10
         
-        # Add the discovered point to our list with the initial line colour
-        max_loc_x = int(( max_loc[0] + calib_XY[0] ) ) # TODO: Figure out the maths
-        max_loc_y = int(( max_loc[1] + calib_XY[1] ) ) # TODO: Figure out the maths
+        # Offset the location based on the calibration
+        max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
+        max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
 
         if not first_shot:
             # Scale based on the virtual / real range distances
             max_loc_x = int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 )
             max_loc_y = int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 )
 
+            # Limit the coordinates to the video frame
             if max_loc_x < 0:
                 max_loc_x = 0
             elif max_loc_x > video_width:
@@ -191,8 +192,11 @@ while True:
                 max_loc_y = 0
             elif max_loc_y > video_height:
                 max_loc_y = video_height
+
+            # Store the scaled coordinates (unless it's the calibration 'shot')
             max_loc = (max_loc_x, max_loc_y)
-            
+        
+        # Add the discovered point to our list with the initial line colour
         stored_trace.append((max_loc_x, max_loc_y))
         line_colour.append(init_line_colour)
 
@@ -204,7 +208,7 @@ while True:
 
             if volume_norm >= click_threshold:
                 
-                recorded_shot_loc = (max_loc[0] + calib_XY[0], max_loc[1] + calib_XY[1])
+                recorded_shot_loc = max_loc
                 shot_fired = True
                 shots_fired += 1
 
