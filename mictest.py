@@ -4,20 +4,31 @@
 import sounddevice as sd # requires pip install sounddevice
 import numpy as np
 # from numpy.fft import fft, fftfreq
-from scipy.fftpack import fft, fftfreq
-from matplotlib import pyplot as plt
-import math
+# from scipy.fftpack import fft, fftfreq
+# from matplotlib import pyplot as plt
+# import math
 import soundfile as sf
+from scipy.signal import butter, lfilter
 
-def print_sound(indata, outdata, frames, time, status):
-    volume_norm = np.linalg.norm(indata)*10
-    print (int(volume_norm))
+def butter_highpass(cutoff, fs, order=5):
+    return butter(order, cutoff, fs=fs, btype='high', analog=False)
 
-CHUNK = 44100
+def butter_highpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_highpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
+# Filter requirements.
+order = 5
+fs = 44100.0       # sample rate, Hz
+cutoff = 4000  # desired cutoff frequency of the filter, Hz
+T = 1.0
+CHUNK = int(T * fs)
+
 print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config
 
 stream = sd.Stream(
-  device=(1, 4),
+  device=(1, 3),
   samplerate=44100,
   channels=1,
   blocksize=CHUNK)
@@ -31,31 +42,56 @@ a = True
 while a:
 
     indata, overflowed = stream.read(CHUNK)
+    ndata = np.linalg.norm(indata)
     volume_norm = np.linalg.norm(indata)*10
     if int(volume_norm) > 60:
         print(int(volume_norm))
     a = False
 
-low = 100
-high = 2000
-columns = 80
-gain = 10
-delta_f = (high - low) / columns
-fftsize = math.ceil(44100 / 1000)
-low_bin = math.floor(low / delta_f)
+# indata = np.random.default_rng().uniform(-0.5, 0.5, int(T * fs))
 
-# magnitude = np.abs(np.fft.rfft(indata[:, 0], n=fftsize))
-magnitude = np.abs(np.fft.fft(indata, n = fftsize))
-magnitude *= gain / fftsize
+if any(indata):
+  cdata = indata[:, 0]
 
-sf.write('out.wav', indata, 44100)
+  print(np.min(cdata), np.max(cdata))
+  sd.play(indata, fs)
+  sd.wait()
 
-print(magnitude)
+  fldata = butter_highpass_filter(indata[:, 0], cutoff, fs, order)
+  fldata = fldata / np.max(fldata) # Normalise
 
-plt.plot(abs(magnitude))
-plt.show()
+  print(np.min(fldata), np.max(fldata))
+
+  sd.play(fldata, fs)
+  sd.wait()
+
+  sf.write('in.wav', indata, 44100)
+  sf.write('fl.wav', fldata, 44100)
 
 exit()
+
+# Get the filter coefficients so we can check its frequency response.
+# b, a = butter_highpass(cutoff, fs)
+# print(b, a)
+
+# low = 100
+# high = 2000
+# columns = 80
+# gain = 10
+# delta_f = (high - low) / columns
+# fftsize = math.ceil(44100 / 1000)
+# low_bin = math.floor(low / delta_f)
+
+# magnitude = np.abs(np.fft.rfft(indata[:, 0], n=fftsize))
+# magnitude = np.abs(np.fft.fft(indata, n = fftsize))
+# magnitude *= gain / fftsize
+
+# print(magnitude)
+
+# plt.plot(abs(magnitude))
+# plt.show()
+
+
 
 # plt.plot(indata)
 # plt.show()
