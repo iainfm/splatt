@@ -7,7 +7,6 @@
 
 #  TODO:
 #  Export of recorded data to CSV
-#  Scaling according to simulated distance
 #  Configuration (device IDs etc) - setup, store and retrieval
 
 print('Splatt initialising...')
@@ -30,7 +29,7 @@ auto_reset = True           # reset after shot taken
 auto_reset_time = 1         # Number of seconds after the shot before resetting
 target_index = 0
 
-# Target dimensions TODO: change to array (or other)
+# Target dimensions
 # (name, diameter (mm), filename, simulated_range_length)
 target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25),
           ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50),
@@ -70,7 +69,7 @@ composite_output_file = 'composite.png'
 
 # Audio and video processing options
 blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
-min_detection_value = 50  # Trigger value to detect the reference point
+detection_threshold = 50  # Trigger value to detect the reference point
 click_threshold = 50      # audio level that triggers a 'shot'
 
 # Plotting colours and options
@@ -95,9 +94,9 @@ calib_XY = (0, 0)
 
 # Font details
 font = cv2.FONT_HERSHEY_PLAIN
-font_scale = 2
-font_thickness = 2
-line_type = 2
+font_scale = np.ceil( scaled_shot_radius / 13 )
+font_thickness = 1
+line_type = 1
 
 # Sound capture parameters
 audio_chunk_size = 4096
@@ -163,7 +162,11 @@ def calibrate_offset():
     global calib_XY
     calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
     if debug_level > 0:
-        print(calib_XY)
+        print('Calibration offset:', calib_XY)
+
+
+################################################## Main Loop ##################################################
+
 
 while True:
 
@@ -188,7 +191,7 @@ while True:
         print(max_brightness, '@', max_loc)
 
     # If minimum brightness not met skip the rest of the loop
-    if max_brightness > min_detection_value:
+    if max_brightness > detection_threshold:
 
         # Check for click
         audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
@@ -247,7 +250,6 @@ while True:
                     this_line_colour[c] = 0
             line_colour[n] = tuple(this_line_colour)
         else:
-            # print(shot_time - time())
             if time() > shot_time:
                 auto_reset_time_expired = True
 
@@ -267,17 +269,24 @@ while True:
                 shots_plotted += 1
                 composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
                 cv2.circle(composite_image, recorded_shot, scaled_shot_radius, composite_colour, line_thickness)
-                # TODO: This needs to be improved, ideally by finding the bounding box of the shot number being plotted.
                 
+                # Number the shot on the composite image
+                text_size = cv2.getTextSize(str(shots_plotted), font, font_scale, font_thickness)[0]
+                text_X = int((recorded_shot[0] - (text_size[0]) / 2))
+                text_Y = int((recorded_shot[1] + (text_size[1]) / 2))
+
                 cv2.putText(composite_image, str(shots_plotted), 
-                    (int(recorded_shot[0] - (scaled_shot_radius / 2)), int(recorded_shot[1] + (scaled_shot_radius / 2))),
+                    (text_X, text_Y),
                     font, font_scale, composite_colour, font_thickness, line_type)
 
             # Find the bounding circle of all shots so far
             if len(composite_shots) > 1:
-                (cx,cy),cradius = cv2.minEnclosingCircle(np.asarray(composite_shots))
-                ccentre = (int(cx), int(cy))
-                cv2.circle(composite_image, ccentre, int(cradius + scaled_shot_radius), (0, 255, 255), 2)
+                (bc_X, bc_Y), bc_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
+                bc_centre = (int(bc_X), int(bc_Y))
+                cv2.circle(composite_image, bc_centre, int(bc_radius + scaled_shot_radius), (0, 255, 255), 2)
+
+                actual_spread = (2 * bc_radius * target_diameter / video_height) # (mm)
+                cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
             
 
         # Remember to do anything else required with the recorded shot location here (eg csv output)
@@ -325,7 +334,6 @@ while True:
             # Define the codec and create VideoWriter object
             video_length = time() - video_start_time
             video_fps = int(len(video_frames) / video_length)
-            print(len(video_frames), video_length)
             four_cc = cv2.VideoWriter_fourcc(*'XVID')
             video_out = cv2.VideoWriter(video_output_file, four_cc, video_fps, video_size)
 
