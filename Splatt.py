@@ -3,6 +3,7 @@
 # References:
 #   https://www.pyimagesearch.com/2014/09/29/finding-brightest-spot-image-using-python-opencv/
 #   https://github.com/spatialaudio/python-sounddevice/issues/316
+#   https://stackoverflow.com/questions/25191620/creating-lowpass-filter-in-scipy-understanding-methods-and-units
 
 #  TODO:
 #  Export of recorded data to CSV
@@ -38,7 +39,7 @@ target_filename = '1989 25yard Outward Gauging.png'
 # video capture object
 video_capture_device = 1 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
-captured_image_flip_needed = False # Whether the camera is mounted upside down
+captured_image_flip_needed = True # Whether the camera is mounted upside down
 
 # Check the video stream started ok
 assert video_capture.isOpened()
@@ -61,7 +62,7 @@ composite_output_file = 'composite.png'
 # Audio and video processing options
 blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
 min_detection_value = 50  # Trigger value to detect the reference point
-click_threshold = 100     # audio level that triggers a 'shot'
+click_threshold = 30      # audio level that triggers a 'shot'
 
 # Plotting colours and options
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
@@ -85,10 +86,10 @@ calib_XY = (0, 0)
 # Sound capture parameters
 audio_chunk_size = 4096
 if debug_level > 0:
-    print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config
+    print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config / -l(ist) option
 
 audio_stream = sd.Stream(
-  device = (1, 4),
+  device = None,
   samplerate = 44100,
   channels = 1,
   blocksize = audio_chunk_size)
@@ -175,7 +176,7 @@ while True:
 
         # Check for click
         audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
-        volume_norm = np.linalg.norm(audio_data) * 10
+        volume_norm = np.linalg.norm(audio_data[:, 0]) * 10
         
         # Offset the location based on the calibration
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
@@ -212,6 +213,7 @@ while True:
 
             # Check audio levels TODO: FFT analysis
             if volume_norm >= click_threshold:
+                print(volume_norm)
                 recorded_shot_loc = max_loc
                 shot_fired = True
                 shots_fired += 1

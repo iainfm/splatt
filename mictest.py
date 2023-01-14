@@ -28,7 +28,7 @@ CHUNK = int(T * fs)
 print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config
 
 stream = sd.Stream(
-  device=(1, 3),
+  device=None,
   samplerate=44100,
   channels=1,
   blocksize=CHUNK)
