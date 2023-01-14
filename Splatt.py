@@ -23,19 +23,25 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Virtual shooting range and session options
-simulated_range_length = 25 # yards (doesn't matter as long
+simulated_range_length = 20 # yards (doesn't matter as long
 real_range_length = 5       # as unit are the same)
 scale_factor = simulated_range_length / real_range_length
 shot_calibre = 5.6          # mm (0.22")
-session_name = '25 yard prone practice 13/01/23'
+session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
 auto_reset_time = 5         # Number of seconds after the shot before resetting
+target_index = 0
 
-# Target dimensions
-target_name = '25 yard prone'
-target_diameter = 51.39 # mm
-target_filename = '1989 25yard Outward Gauging.png'
+# Target dimensions TODO: change to array (or other)
+# (name, diameter (mm), filename)
+target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png'),
+          ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png'),
+          ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png'))
 
+target_name = target[target_index][0]
+target_diameter = target[target_index][1]
+target_filename = target[target_index][2]
+  
 # video capture object
 video_capture_device = 1 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
@@ -62,7 +68,7 @@ composite_output_file = 'composite.png'
 # Audio and video processing options
 blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
 min_detection_value = 50  # Trigger value to detect the reference point
-click_threshold = 30      # audio level that triggers a 'shot'
+click_threshold = 50      # audio level that triggers a 'shot'
 
 # Plotting colours and options
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
@@ -213,7 +219,6 @@ while True:
 
             # Check audio levels TODO: FFT analysis
             if volume_norm >= click_threshold:
-                print(volume_norm)
                 recorded_shot_loc = max_loc
                 shot_fired = True
                 shots_fired += 1
@@ -240,7 +245,7 @@ while True:
         cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
 
         if not first_shot:
-            composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(1, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
+            composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
             cv2.circle(composite_image, recorded_shot_loc, scaled_shot_radius, composite_colour, line_thickness)
             
             font = cv2.FONT_HERSHEY_PLAIN
