@@ -23,29 +23,32 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Virtual shooting range and session options
-simulated_range_length = 20 # yards (doesn't matter as long
-real_range_length = 5       # as unit are the same)
-scale_factor = simulated_range_length / real_range_length
+real_range_length = 5       # (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
-auto_reset_time = 5         # Number of seconds after the shot before resetting
+auto_reset_time = 1         # Number of seconds after the shot before resetting
 target_index = 0
 
 # Target dimensions TODO: change to array (or other)
-# (name, diameter (mm), filename)
-target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png'),
-          ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png'),
-          ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png'))
+# (name, diameter (mm), filename, simulated_range_length)
+target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25),
+          ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50),
+          ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png', 100))
 
 target_name = target[target_index][0]
 target_diameter = target[target_index][1]
 target_filename = target[target_index][2]
+simulated_range_length = target[target_index][3]
+
+# Scaling variables
+scale_factor = simulated_range_length / real_range_length
   
 # video capture object
 video_capture_device = 1 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
 captured_image_flip_needed = True # Whether the camera is mounted upside down
+video_frames = []
 
 # Check the video stream started ok
 assert video_capture.isOpened()
@@ -79,6 +82,7 @@ colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 # Initialise tuples and variables
 line_colour = []
 stored_trace = []
+composite_shots = []
 start_trace = 1
 shots_fired = -1 # The 0th is the calibration shot TODO: reset on keypress
 auto_reset_time_expired = False
@@ -88,6 +92,12 @@ recorded_shot_loc = []
 
 # Calibration / scaling
 calib_XY = (0, 0)
+
+# Font details
+font = cv2.FONT_HERSHEY_PLAIN
+font_scale = 2
+font_thickness = 2
+line_type = 2
 
 # Sound capture parameters
 audio_chunk_size = 4096
@@ -211,6 +221,10 @@ while True:
         stored_trace.append((max_loc_x, max_loc_y))
         line_colour.append(init_line_colour)
 
+    # Append the new frame
+    if record_video:
+        video_frames.append(target_image.copy())
+
     # Plot the line traces so far
     for n in range(start_trace, len(stored_trace)):
         this_line_colour = list(line_colour[n])
@@ -245,18 +259,26 @@ while True:
         cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
 
         if not first_shot:
-            composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
-            cv2.circle(composite_image, recorded_shot_loc, scaled_shot_radius, composite_colour, line_thickness)
-            
-            font = cv2.FONT_HERSHEY_PLAIN
-            font_scale = 2
-            font_thickness = 2
-            line_type = 2
+            composite_shots.append(recorded_shot_loc)
 
-            # TODO: This needs to be improved, ideally by finding the bounding box of the shot number being plotted.
-            cv2.putText(composite_image, str(shots_fired), 
-                (int(recorded_shot_loc[0] - (scaled_shot_radius / 2)), int(recorded_shot_loc[1] + (scaled_shot_radius / 2))),
-                font, font_scale, composite_colour, font_thickness, line_type)
+            composite_image = blank_target_image.copy()
+            shots_plotted = 0
+            for recorded_shot in composite_shots:
+                shots_plotted += 1
+                composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
+                cv2.circle(composite_image, recorded_shot, scaled_shot_radius, composite_colour, line_thickness)
+                # TODO: This needs to be improved, ideally by finding the bounding box of the shot number being plotted.
+                
+                cv2.putText(composite_image, str(shots_plotted), 
+                    (int(recorded_shot[0] - (scaled_shot_radius / 2)), int(recorded_shot[1] + (scaled_shot_radius / 2))),
+                    font, font_scale, composite_colour, font_thickness, line_type)
+
+            # Find the bounding circle of all shots so far
+            if len(composite_shots) > 1:
+                (cx,cy),cradius = cv2.minEnclosingCircle(np.asarray(composite_shots))
+                ccentre = (int(cx), int(cy))
+                cv2.circle(composite_image, ccentre, int(cradius + scaled_shot_radius), (0, 255, 255), 2)
+            
 
         # Remember to do anything else required with the recorded shot location here (eg csv output)
         recorded_shot_loc = ()
@@ -273,10 +295,6 @@ while True:
 
     if debug_level > 0:
         cv2.imshow("Splatt - Grey", grey_image)
-
-    # Write the frame to the output file
-    if record_video:
-        video_out.write(target_image)
 
     if auto_reset_time_expired:
         initialise_trace()
@@ -296,13 +314,26 @@ while True:
         initialise_trace()
     
     elif key_press == ord('v'):
-        # Record the output as a movie
+        # Start recording
         if not record_video:
+            video_start_time = time()
+            video_frames = []
+            record_video = True
+            print('Recording started')
+        else:
+            # Save the video
             # Define the codec and create VideoWriter object
+            video_length = time() - video_start_time
+            video_fps = int(len(video_frames) / video_length)
+            print(len(video_frames), video_length)
             four_cc = cv2.VideoWriter_fourcc(*'XVID')
             video_out = cv2.VideoWriter(video_output_file, four_cc, video_fps, video_size)
-            record_video = True
-            print('Recording started. Output file:', video_output_file)
+
+            for frame in video_frames:
+                video_out.write(frame)
+
+            record_video = False
+            print('Recording saved as:', video_output_file)
     
     elif key_press == ord('d'):
         # Increase debug level
