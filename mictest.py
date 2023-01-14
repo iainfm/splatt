@@ -5,7 +5,7 @@ import sounddevice as sd # requires pip install sounddevice
 import numpy as np
 # from numpy.fft import fft, fftfreq
 # from scipy.fftpack import fft, fftfreq
-# from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 # import math
 import soundfile as sf
 from scipy.signal import butter, lfilter
@@ -21,7 +21,7 @@ def butter_highpass_filter(data, cutoff, fs, order=5):
 # Filter requirements.
 order = 5
 fs = 44100.0       # sample rate, Hz
-cutoff = 4000  # desired cutoff frequency of the filter, Hz
+cutoff = 6000  # desired cutoff frequency of the filter, Hz
 T = 1.0
 CHUNK = int(T * fs)
 
@@ -61,6 +61,9 @@ if any(indata):
   fldata = fldata / np.max(fldata) # Normalise
 
   print(np.min(fldata), np.max(fldata))
+
+  plt.plot(abs(np.fft.rfft(fldata)))
+  plt.show()
 
   sd.play(fldata, fs)
   sd.wait()
