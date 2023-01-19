@@ -16,38 +16,39 @@ import cv2               # pip install opencv-python / apt install python3-openc
 import sounddevice as sd # pip install sounddevice (requires libffi-dev)
 import random
 from time import time
+from config import *     # read static variables etc
 
-# Debug settings
-debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
-debug_max = 2     # max debug level
+# Functions TODO: move to separate file
 
-# Virtual shooting range and session options
-real_range_length = 5       # (units must match simulated range length)
-shot_calibre = 5.6          # mm (0.22")
-session_name = 'Practice 13/01/23'
-auto_reset = True           # reset after shot taken
-auto_reset_time = 1         # Number of seconds after the shot before resetting
-target_index = 0
+def initialise_trace():
+    # Clear the trace and reload target_image
+    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, auto_reset_time_expired
+    start_trace = 1
+    stored_trace = []
+    recorded_shot_loc = []
+    line_colour = []
+    shot_fired = False
+    target_image = cv2.imread(target_filename)
+    target_image = blank_target_image.copy()
+    auto_reset_time_expired = False
 
-# Target dimensions
-# (name, diameter (mm), filename, simulated_range_length)
-target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25),
-          ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50),
-          ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png', 100))
+def calibrate_offset():
+    # Calibrate offset to point source
+    global calib_XY
+    calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
+    print('Calibration offset:', calib_XY) if debug_level > 0 else None
 
-target_name = target[target_index][0]
-target_diameter = target[target_index][1]
-target_filename = target[target_index][2]
-simulated_range_length = target[target_index][3]
+def convert_to_real(size_in_pixels):
+    # Convert size measured in pixels to real-world dimensions based on target_size:image_height
+    return size_in_pixels * target_diameter / video_height
 
-# Scaling variables
-scale_factor = simulated_range_length / real_range_length
-  
+def convert_to_pixels(size_in_mm):
+    # Convert real-world dimensions to pixels base on target_szie:image_height
+    return int(size_in_mm * video_height / target_diameter)
+
 # video capture object
-video_capture_device = 1 # TODO: make this better
+video_capture_device = 0 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
-captured_image_flip_needed = True # Whether the camera is mounted upside down
-video_frames = []
 
 # Check the video stream started ok
 assert video_capture.isOpened()
@@ -57,51 +58,15 @@ video_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 video_size = (video_width, video_height)
 video_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
-scaled_shot_radius = int(0.5 * shot_calibre * video_height / target_diameter)
+scaled_shot_radius = convert_to_pixels(0.5 * shot_calibre)
 
-if debug_level > 0:
-    print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.')
+print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.') if debug_level > 0 else None
 
-# Recording options
-record_video = False # (Do not set to true here)
-video_output_file = 'output.avi'
-composite_output_file = 'composite.png'
-
-# Audio and video processing options
-blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
-detection_threshold = 50  # Trigger value to detect the reference point
-click_threshold = 50      # audio level that triggers a 'shot'
-
-# Plotting colours and options
-init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
-shot_colour = (255, 0, 255)       # Magenta
-line_thickness = 2
-colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
-
-# Initialise tuples and variables
-line_colour = []
-stored_trace = []
-composite_shots = []
-start_trace = 1
-shots_fired = -1 # The 0th is the calibration shot TODO: reset on keypress
-auto_reset_time_expired = False
-
-# Coordinates of the 'fired' shot
-recorded_shot_loc = []
-
-# Calibration / scaling
-calib_XY = (0, 0)
-
-# Font details
 font = cv2.FONT_HERSHEY_PLAIN
 font_scale = np.ceil( scaled_shot_radius / 13 )
-font_thickness = 1
-line_type = 1
 
-# Sound capture parameters
-audio_chunk_size = 4096
-if debug_level > 0:
-    print(sd.query_devices()) # Choose device numbers from here. TODO: Get/save config / -l(ist) option
+
+print(sd.query_devices()) if debug_level > 0 else None # Choose device numbers from here. TODO: Get/save config / -l(ist) option
 
 audio_stream = sd.Stream(
   device = None,
@@ -116,9 +81,8 @@ first_shot = True
 # Open target png  and create target_image and composite_image based on video frame size
 target_file_image = cv2.imread(target_filename)
 
-if ( target_file_image.shape[0] != target_file_image.shape[1]):
-    # Target image should be square
-    print('Warning: Target image is not square')
+# Target image should be square for scaling etc to work properly
+print('Warning: Target image is not square') if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
 
 # Resize the target image to fit the video frame
 target_file_image = cv2.resize(target_file_image, (video_height, video_height))
@@ -143,30 +107,7 @@ composite_image = blank_target_image.copy()
 audio_stream.start()
 assert audio_stream.active
 
-# Functions
-
-def initialise_trace():
-    # Clear the trace and reload target_image
-    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, auto_reset_time_expired
-    start_trace = 1
-    stored_trace = []
-    recorded_shot_loc = []
-    line_colour = []
-    shot_fired = False
-    target_image = cv2.imread(target_filename)
-    target_image = blank_target_image.copy()
-    auto_reset_time_expired = False
-
-def calibrate_offset():
-    # Calibrate offset to point source
-    global calib_XY
-    calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
-    if debug_level > 0:
-        print('Calibration offset:', calib_XY)
-
-
 ################################################## Main Loop ##################################################
-
 
 while True:
 
@@ -187,8 +128,7 @@ while True:
     # Find the point of max brightness
     (min_brightness, max_brightness, min_loc, max_loc) = cv2.minMaxLoc(grey_image)
 
-    if debug_level > 1:
-        print(max_brightness, '@', max_loc)
+    print(max_brightness, '@', max_loc) if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
 
     # If minimum brightness not met skip the rest of the loop
     if max_brightness > detection_threshold:
@@ -202,20 +142,9 @@ while True:
         max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
 
         if not first_shot:
-            # Scale based on the virtual / real range distances
-            max_loc_x = int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 )
-            max_loc_y = int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 )
-
-            # Limit the coordinates to the video frame
-            if max_loc_x < 0:
-                max_loc_x = 0
-            elif max_loc_x > video_width:
-                max_loc_x = video_width
-
-            if max_loc_y < 0:
-                max_loc_y = 0
-            elif max_loc_y > video_height:
-                max_loc_y = video_height
+            # Scale based on the virtual / real range distances, limited to video frame dimensions
+            max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
+            max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
 
             # Store the scaled coordinates (unless it's the calibration 'shot')
             max_loc = (max_loc_x, max_loc_y)
@@ -225,8 +154,7 @@ while True:
         line_colour.append(init_line_colour)
 
     # Append the new frame
-    if record_video:
-        video_frames.append(target_image.copy())
+    video_frames.append(target_image.copy()) if record_video else None
 
     # Plot the line traces so far
     for n in range(start_trace, len(stored_trace)):
@@ -250,8 +178,7 @@ while True:
                     this_line_colour[c] = 0
             line_colour[n] = tuple(this_line_colour)
         else:
-            if time() > shot_time:
-                auto_reset_time_expired = True
+            auto_reset_time_expired = True if time() > shot_time else False
 
         # Draw a line from the previous point to this one
         cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
@@ -285,7 +212,7 @@ while True:
                 bc_centre = (int(bc_X), int(bc_Y))
                 cv2.circle(composite_image, bc_centre, int(bc_radius + scaled_shot_radius), (0, 255, 255), 2)
 
-                actual_spread = (2 * bc_radius * target_diameter / video_height) # (mm)
+                actual_spread = convert_to_real(2 * bc_radius) # (mm)
                 cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
             
 
@@ -301,9 +228,7 @@ while True:
     # display the results
     cv2.imshow("Splatt - Live trace", target_image)
     cv2.imshow("Splatt - Composite", composite_image)
-
-    if debug_level > 0:
-        cv2.imshow("Splatt - Grey", grey_image)
+    cv2.imshow("Splatt - Grey", grey_image) if debug_level > 0 else None
 
     if auto_reset_time_expired:
         initialise_trace()
@@ -347,7 +272,8 @@ while True:
         # Increase debug level
         debug_level += 1
         if debug_level > debug_max:
-            debug_level = False
+            cv2.destroyWindow("Splatt - Grey")
+            debug_level = 0
         print('Debug level:', int(debug_level))
     
     elif key_press == ord('r'):
