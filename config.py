@@ -6,13 +6,15 @@ debug_max = 2     # max debug level
 video_capture_device = 1 # TODO: make this better
 
 # Virtual shooting range and session options
-real_range_length = 6       # (units must match simulated range length)
+real_range_length = 3       # (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
 auto_reset_time = 1         # Number of seconds after the shot before resetting
-calibration_shots_required = 5       # Number of shots to average to calibrate the system
-target_index = 0
+calibration_shots_req = 5   # Number of shots to average to calibrate the system
+shots_per_series = 10       # How many shots before auto-resetting
+series_reset_pause = 3      # seconds to pause before starting a new series
+target_index = 0            # Target to use (see below)
 
 # Target dimensions
 # (name, diameter (mm), filename, simulated_range_length)
@@ -50,13 +52,8 @@ line_thickness = 2
 colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 
 # Initialise tuples and variables
-line_colour = []
-stored_trace = []
 composite_shots = []
 calibration_shots = []
-start_trace = 1
-shots_fired = -1 # The 0th is the calibration shot TODO: reset on keypress
-auto_reset_time_expired = False
 
 # Coordinates of the 'fired' shot
 recorded_shot_loc = []
@@ -67,6 +64,11 @@ calib_XY = (0, 0)
 # Font details
 font_thickness = 1
 line_type = 1
+
+# Fancy printing of 'calibration'
+calib_text_red = 255
+d_calib_text_red = -2
+calib_text_red_min = 127
 
 # Sound capture parameters
 audio_chunk_size = 4096

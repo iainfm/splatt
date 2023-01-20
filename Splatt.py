@@ -21,15 +21,16 @@ from splatt_functions import *
 
 # Functions TODO: move to separate file
 
-def initialise_trace():
+def initialise_trace(clear_composite: bool):
     # Clear the trace and reload target_image
-    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired
-    start_trace = 1
+    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired
     stored_trace = []
-    recorded_shot_loc = []
+    recorded_shot_loc = ()
     line_colour = []
     shot_fired = False
     target_image = blank_target_image.copy()
+    if clear_composite:
+        composite_image = blank_target_image.copy()
     auto_reset_time_expired = False
 
 # video capture object
@@ -85,14 +86,14 @@ target_offset = int(blank_target_image.shape[1]/2 - target_file_image.shape[1]/2
 blank_target_image[0:target_file_image.shape[1], target_offset:target_file_image.shape[0] + target_offset] = target_file_image
 
 # Copy the blank target image to the two images we use for display
-target_image = blank_target_image.copy()
-composite_image = blank_target_image.copy()
+# target_image = blank_target_image.copy()
+# composite_image = blank_target_image.copy()
 
 # Start listening and check it started
 audio_stream.start()
 assert audio_stream.active
 
-initialise_trace()
+initialise_trace(True)
 
 ################################################## Main Loop ##################################################
 
@@ -126,7 +127,7 @@ while True:
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
         max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
         
-        if shots_fired >= calibration_shots_required:
+        if shots_fired >= calibration_shots_req:
             # Scale based on the virtual / real range distances, limited to video frame dimensions
             max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
             max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
@@ -142,7 +143,7 @@ while True:
     video_frames.append(target_image.copy()) if record_video else None
 
     # Plot the line traces so far
-    for n in range(start_trace, len(stored_trace)):
+    for n in range(1, len(stored_trace)):
         this_line_colour = list(line_colour[n])
 
         if not shot_fired:
@@ -169,10 +170,12 @@ while True:
         cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
 
     # Draw the shot circle if the shot has been taken TODO: Check whether it looks better to plot this under the trace
+
     if recorded_shot_loc:
+
         cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
 
-        if shots_fired > calibration_shots_required:
+        if shots_fired > calibration_shots_req:
 
             composite_shots.append(recorded_shot_loc)
 
@@ -208,22 +211,44 @@ while True:
         # Remember to do anything else required with the recorded shot location here (eg csv output)
         recorded_shot_loc = ()
 
-        if shots_fired == calibration_shots_required:
+        if shots_fired == calibration_shots_req:
             # Calibrate the system and clear the results
-            # TODO: average them out here
+            
+            # Find the spread of calibration shots
             (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(calibration_shots))
             calib_XY = calibrate_offset(video_width, video_height, cal_X, cal_Y)
+
+            # Plot a circle to show the calibration data
             print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
-            initialise_trace()
-            # first_shot = False
-            
-    # display the results
-    cv2.imshow("Splatt - Live trace", target_image)
-    cv2.imshow("Splatt - Composite", composite_image)
-    cv2.imshow("Splatt - Grey", grey_image) if debug_level > 0 else None
+            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), int(cal_radius), (0, 255, 255), 2)
+            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), 2, (0, 255, 255), 2)
+
+    if shots_fired < calibration_shots_req:
+        cv2.putText(target_image, 'CALIBRATING', (5, 25), font, 2, (0, 0, calib_text_red), 1, 1)
+        
+        # Fancy calibration font colout
+        calib_text_red += d_calib_text_red
+        if calib_text_red > 255:
+            calib_text_red = 255
+            d_calib_text_red = -8
+        elif calib_text_red < calib_text_red_min:
+            calib_text_red = calib_text_red_min
+            d_calib_text_red = 8
+
+    cv2.imshow('Splatt - Live trace', target_image)
+    cv2.imshow('Splatt - Composite', composite_image)
+    cv2.imshow('Splatt - Blurred Vision', grey_image) if debug_level > 0 else None
 
     if auto_reset_time_expired:
-        initialise_trace()
+        if (shots_fired <= shots_per_series + calibration_shots_req - 1):
+            initialise_trace(False)
+        else:
+            cv2.waitKey(series_reset_pause * 1000)
+            composite_shots = []
+            shots_fired = calibration_shots_req
+            initialise_trace(True)
+        if  shots_fired == calibration_shots_req:
+            initialise_trace(True)
 
     # Check for user input
     key_press = cv2.waitKey(1) & 0xFF
@@ -237,9 +262,8 @@ while True:
 
     elif key_press == ord('c'):
         # Clear the trace
-        initialise_trace()
+        initialise_trace(True)
         composite_shots = []
-        composite_image = blank_target_image.copy()
     
     elif key_press == ord('v'):
         # Start recording
@@ -266,7 +290,7 @@ while True:
         # Increase debug level
         debug_level += 1
         if debug_level > debug_max:
-            cv2.destroyWindow("Splatt - Grey")
+            cv2.destroyWindow("Splatt - Blurred Vision")
             debug_level = 0
         print('Debug level:', int(debug_level))
     
@@ -276,8 +300,7 @@ while True:
         composite_shots = []
         calib_XY = (0, 0)
         shots_fired = 0
-        initialise_trace
-        composite_image = blank_target_image.copy()
+        initialise_trace(True)
 
     elif key_press == ord('s'):
         # Save the composite image (and clear it?)
