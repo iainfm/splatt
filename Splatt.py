@@ -17,37 +17,22 @@ import sounddevice as sd # pip install sounddevice (requires libffi-dev)
 import random
 from time import time
 from config import *     # read static variables etc
+from splatt_functions import *
 
 # Functions TODO: move to separate file
 
 def initialise_trace():
     # Clear the trace and reload target_image
-    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, auto_reset_time_expired
+    global start_trace, stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired
     start_trace = 1
     stored_trace = []
     recorded_shot_loc = []
     line_colour = []
     shot_fired = False
-    target_image = cv2.imread(target_filename)
     target_image = blank_target_image.copy()
     auto_reset_time_expired = False
 
-def calibrate_offset():
-    # Calibrate offset to point source
-    global calib_XY
-    calib_XY = (int((video_width / 2) - max_loc[0]), int((video_height / 2) - max_loc[1]))
-    print('Calibration offset:', calib_XY) if debug_level > 0 else None
-
-def convert_to_real(size_in_pixels):
-    # Convert size measured in pixels to real-world dimensions based on target_size:image_height
-    return size_in_pixels * target_diameter / video_height
-
-def convert_to_pixels(size_in_mm):
-    # Convert real-world dimensions to pixels base on target_szie:image_height
-    return int(size_in_mm * video_height / target_diameter)
-
 # video capture object
-video_capture_device = 0 # TODO: make this better
 video_capture = cv2.VideoCapture(video_capture_device)
 
 # Check the video stream started ok
@@ -58,14 +43,13 @@ video_height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 video_size = (video_width, video_height)
 video_fps = int(video_capture.get(cv2.CAP_PROP_FPS))
 
-scaled_shot_radius = convert_to_pixels(0.5 * shot_calibre)
+scaled_shot_radius = convert_to_pixels(0.5 * shot_calibre, target_diameter, video_height)
 
-print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.') if debug_level > 0 else None
-
+# Font options
 font = cv2.FONT_HERSHEY_PLAIN
 font_scale = np.ceil( scaled_shot_radius / 13 )
 
-
+print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.') if debug_level > 0 else None
 print(sd.query_devices()) if debug_level > 0 else None # Choose device numbers from here. TODO: Get/save config / -l(ist) option
 
 audio_stream = sd.Stream(
@@ -76,7 +60,8 @@ audio_stream = sd.Stream(
 
 # Shot tracking
 shot_fired = False
-first_shot = True
+shots_fired = 0
+# first_shot = True
 
 # Open target png  and create target_image and composite_image based on video frame size
 target_file_image = cv2.imread(target_filename)
@@ -107,6 +92,8 @@ composite_image = blank_target_image.copy()
 audio_stream.start()
 assert audio_stream.active
 
+initialise_trace()
+
 ################################################## Main Loop ##################################################
 
 while True:
@@ -119,10 +106,8 @@ while True:
     if captured_image_flip_needed:
         captured_image = cv2.flip(captured_image, -1)
 
-    # grey-ify the image
+    # grey-ify the image and apply a Gaussian blur to the image
     grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
-
-    # apply a Gaussian blur to the image then find the brightest region
     grey_image = cv2.GaussianBlur(grey_image, (blur_radius, blur_radius), 0)
 
     # Find the point of max brightness
@@ -140,8 +125,8 @@ while True:
         # Offset the location based on the calibration
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
         max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
-
-        if not first_shot:
+        
+        if shots_fired >= calibration_shots_required:
             # Scale based on the virtual / real range distances, limited to video frame dimensions
             max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
             max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
@@ -183,11 +168,12 @@ while True:
         # Draw a line from the previous point to this one
         cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
 
-    # Draw the shot circle if it's been taken
+    # Draw the shot circle if the shot has been taken TODO: Check whether it looks better to plot this under the trace
     if recorded_shot_loc:
         cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
 
-        if not first_shot:
+        if shots_fired > calibration_shots_required:
+
             composite_shots.append(recorded_shot_loc)
 
             composite_image = blank_target_image.copy()
@@ -212,18 +198,24 @@ while True:
                 bc_centre = (int(bc_X), int(bc_Y))
                 cv2.circle(composite_image, bc_centre, int(bc_radius + scaled_shot_radius), (0, 255, 255), 2)
 
-                actual_spread = convert_to_real(2 * bc_radius) # (mm)
+                actual_spread = convert_to_real(2 * bc_radius, target_diameter, video_height) # (mm)
                 cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
+
+        else:
+            calibration_shots.append(recorded_shot_loc)
             
 
         # Remember to do anything else required with the recorded shot location here (eg csv output)
         recorded_shot_loc = ()
 
-        if first_shot:
+        if shots_fired == calibration_shots_required:
             # Calibrate the system and clear the results
-            calibrate_offset()
+            # TODO: average them out here
+            (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(calibration_shots))
+            calib_XY = calibrate_offset(video_width, video_height, cal_X, cal_Y)
+            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
             initialise_trace()
-            first_shot = False
+            # first_shot = False
             
     # display the results
     cv2.imshow("Splatt - Live trace", target_image)
@@ -246,6 +238,8 @@ while True:
     elif key_press == ord('c'):
         # Clear the trace
         initialise_trace()
+        composite_shots = []
+        composite_image = blank_target_image.copy()
     
     elif key_press == ord('v'):
         # Start recording
@@ -278,7 +272,12 @@ while True:
     
     elif key_press == ord('r'):
         # Reset for recalibration
-        first_shot = True
+        calibration_shots = []
+        composite_shots = []
+        calib_XY = (0, 0)
+        shots_fired = 0
+        initialise_trace
+        composite_image = blank_target_image.copy()
 
     elif key_press == ord('s'):
         # Save the composite image (and clear it?)

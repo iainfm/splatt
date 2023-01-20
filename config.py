@@ -2,12 +2,16 @@
 debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
+# Hardware settings
+video_capture_device = 1 # TODO: make this better
+
 # Virtual shooting range and session options
-real_range_length = 5       # (units must match simulated range length)
+real_range_length = 6       # (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
 auto_reset_time = 1         # Number of seconds after the shot before resetting
+calibration_shots_required = 5       # Number of shots to average to calibrate the system
 target_index = 0
 
 # Target dimensions
@@ -49,6 +53,7 @@ colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 line_colour = []
 stored_trace = []
 composite_shots = []
+calibration_shots = []
 start_trace = 1
 shots_fired = -1 # The 0th is the calibration shot TODO: reset on keypress
 auto_reset_time_expired = False
