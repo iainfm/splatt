@@ -118,7 +118,8 @@ while True:
 
     # If minimum brightness not met skip the rest of the loop
     if max_brightness > detection_threshold:
-
+        # TODO: On-screen indicator of whether the detection threshold is met
+        
         # Check for click
         audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
         volume_norm = np.linalg.norm(audio_data[:, 0]) * 10
