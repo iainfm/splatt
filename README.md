@@ -25,6 +25,8 @@ Composite picture showing all shots taken in a session, with spread analysis
 
 Save videos and images of the shots taken for further analysis
 
+Configurable flip of the captured image (for when the webcam is mounted upside down)
+
 ## Planned features
 
 Auto-saving of shot trace static and video images with filename based on session name and date/time
@@ -76,7 +78,23 @@ Aim away from the light source while reloading / re-cocking to avoid spurious sh
 
 After the calibration shots have been completed the calibration offset and scaling of movement will be applied.
 
-Continue to shoot as required
+Continue to shoot as required.
+
+Various keys do things while the system is in use:
+
+C - Clear the composite shots taken so far
+
+D - Change debug level
+
+F - Toggles whether to flip the image for cameras mounted upside-down
+
+Q - Quit
+
+R - Reset and begin again from scratch (ie restart calibration process)
+
+S - Save the composite image (static filename at the moment; on the to-do list)
+
+V - start/stop video recording (static filename at the moment; on the to-do list)
 
 ## Disclaimer
 
