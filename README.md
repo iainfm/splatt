@@ -43,7 +43,7 @@ The following Python libraries installed: Numpy, OpenCV-Python, SoundDevice
 
 Webcam, ideally with a built-in microphone. Depending on the light source used, a cheap one that is sensitive to Infra Red light is useful, or a better one with its IR filter removed and a visible light filter added.
 
-Point light source, eg either a visible or IR LED. CR2032 batteries can power a LED directly, or a 2xAA batter holder with a ~480R resistor in series with the LED.
+Point light source, eg either a visible or IR LED. CR2032 batteries can power a LED directly, or a 2xAA batter holder with a ~480R resistor in series with the LED. If you're feeling adventurous you can try using a joule theif, but I found the one I made didn't drive IR LEDs.
 
 Some way of attaching either the webcam or laser source to the firearm being used.
 
