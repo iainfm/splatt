@@ -10,8 +10,8 @@ real_range_length = 3       # (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
-auto_reset_time = 5         # Number of seconds after the shot before resetting
-calibration_shots_req = 3   # Number of shots to average to calibrate the system
+auto_reset_time = 3         # Number of seconds after the shot before resetting
+calibration_shots_req = 1   # Number of shots to average to calibrate the system
 shots_per_series = 10       # How many shots before auto-resetting
 series_reset_pause = 3      # seconds to pause before starting a new series
 target_index = 0            # Target to use (see below)
@@ -50,6 +50,7 @@ init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
 shot_colour = (255, 0, 255)       # Magenta
 line_thickness = 2
 colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
+display_shot_time = True # Overlay a timer onto the trace
 
 # Initialise tuples and variables
 composite_shots = []

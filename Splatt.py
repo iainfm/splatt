@@ -23,7 +23,7 @@ from splatt_functions import *
 
 def initialise_trace(clear_composite: bool):
     # Clear the trace and reload target_image
-    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired
+    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired, this_shot_time, shots_fired, calibration_shots_req, calibrated
     stored_trace = []
     recorded_shot_loc = ()
     line_colour = []
@@ -31,7 +31,12 @@ def initialise_trace(clear_composite: bool):
     target_image = blank_target_image.copy()
     if clear_composite:
         composite_image = blank_target_image.copy()
+        calibrated = False
     auto_reset_time_expired = False
+    this_shot_time = time()
+
+    if shots_fired >= calibration_shots_req:
+        calibrated = True
 
 # video capture object
 video_capture = cv2.VideoCapture(video_capture_device)
@@ -236,6 +241,13 @@ while True:
             calib_text_red = calib_text_red_min
             d_calib_text_red = 8
 
+    else:
+        if calibrated and display_shot_time:
+            text = "%04.1f" % (time() - this_shot_time, )
+            text_size = cv2.getTextSize(text, font, 2, font_thickness)[0]
+            cv2.rectangle(target_image, (3, 23), (7 + text_size[0], 27 + text_size[1]), (0, 0, 0), -1)
+            cv2.putText(target_image, text, (5, 26 + text_size[1]), font, 2, (255, 255, 255), 1, 1, False)
+
     cv2.imshow('Splatt - Live trace', target_image)
     cv2.imshow('Splatt - Composite', composite_image)
     cv2.imshow('Splatt - Blurred Vision', grey_image) if debug_level > 0 else None
@@ -300,6 +312,7 @@ while True:
         calibration_shots = []
         composite_shots = []
         calib_XY = (0, 0)
+        calibrated = False
         shots_fired = 0
         initialise_trace(True)
 
@@ -311,3 +324,10 @@ while True:
         # Change the flip mode
         captured_image_flip_needed = not captured_image_flip_needed
         print('Flip required:', captured_image_flip_needed)
+
+    elif key_press == ord(' '):
+        # Undo last shot
+        if (shots_fired > calibration_shots_req):
+            composite_shots.pop()
+        else:
+            calibration_shots.pop() if len(calibration_shots) > 1 else None
