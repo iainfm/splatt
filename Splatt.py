@@ -39,7 +39,10 @@ def initialise_trace(clear_composite: bool):
         calibrated = True
 
 # video capture object
-video_capture = cv2.VideoCapture(video_capture_device)
+video_capture = cv2.VideoCapture(video_capture_device, cv2.CAP_DSHOW)
+
+video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 # Check the video stream started ok
 assert video_capture.isOpened()
