@@ -27,6 +27,8 @@ Save videos and images of the shots taken for further analysis
 
 Configurable flip of the captured image (for when the webcam is mounted upside down)
 
+Undo last shot, in case of false detections
+
 ## Planned features
 
 Auto-saving of shot trace static and video images with filename based on session name and date/time
