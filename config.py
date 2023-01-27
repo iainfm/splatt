@@ -3,7 +3,7 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Hardware settings
-video_capture_device = 1 # TODO: make this better
+video_capture_device = 0 # TODO: make this better
 
 # Virtual shooting range and session options
 real_range_length = 3       # (units must match simulated range length)
@@ -11,7 +11,7 @@ shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
 auto_reset_time = 3         # Number of seconds after the shot before resetting
-calibration_shots_req = 1   # Number of shots to average to calibrate the system
+calibration_shots_req = 3   # Number of shots to average to calibrate the system
 shots_per_series = 10       # How many shots before auto-resetting
 series_reset_pause = 3      # seconds to pause before starting a new series
 target_index = 0            # Target to use (see below)
@@ -32,7 +32,7 @@ simulated_range_length = target[target_index][3]
 scale_factor = simulated_range_length / real_range_length
   
 # video capture object
-captured_image_flip_needed = True # Whether the camera is mounted upside down
+captured_image_flip_needed = False # Whether the camera is mounted upside down
 video_frames = []
 
 # Recording options

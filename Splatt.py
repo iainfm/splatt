@@ -103,6 +103,32 @@ assert audio_stream.active
 
 initialise_trace(True)
 
+def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
+    shots_plotted = 0
+    for recorded_shot in composite_shots:
+        shots_plotted += 1
+        composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
+        cv2.circle(composite_image, recorded_shot, scaled_shot_radius, composite_colour, line_thickness)
+                
+                # Number the shot on the composite image
+        text_size = cv2.getTextSize(str(shots_plotted), font, font_scale, font_thickness)[0]
+        text_X = int((recorded_shot[0] - (text_size[0]) / 2))
+        text_Y = int((recorded_shot[1] + (text_size[1]) / 2))
+
+        cv2.putText(composite_image, str(shots_plotted), 
+                    (text_X, text_Y),
+                    font, font_scale, composite_colour, font_thickness, line_type)
+
+def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image):
+    # Find the bounding circle of all shots so far
+    if len(composite_shots) > 1:
+        (bc_X, bc_Y), bc_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
+        bc_centre = (int(bc_X), int(bc_Y))
+        cv2.circle(composite_image, bc_centre, int(bc_radius + scaled_shot_radius), (0, 255, 255), 2)
+        actual_spread = convert_to_real(2 * bc_radius, target_diameter, video_height) # (mm)
+        cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
+
+
 ################################################## Main Loop ##################################################
 
 while True:
@@ -189,34 +215,16 @@ while True:
             composite_shots.append(recorded_shot_loc)
 
             composite_image = blank_target_image.copy()
-            shots_plotted = 0
-            for recorded_shot in composite_shots:
-                shots_plotted += 1
-                composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
-                cv2.circle(composite_image, recorded_shot, scaled_shot_radius, composite_colour, line_thickness)
-                
-                # Number the shot on the composite image
-                text_size = cv2.getTextSize(str(shots_plotted), font, font_scale, font_thickness)[0]
-                text_X = int((recorded_shot[0] - (text_size[0]) / 2))
-                text_Y = int((recorded_shot[1] + (text_size[1]) / 2))
-
-                cv2.putText(composite_image, str(shots_plotted), 
-                    (text_X, text_Y),
-                    font, font_scale, composite_colour, font_thickness, line_type)
-
-            # Find the bounding circle of all shots so far
-            if len(composite_shots) > 1:
-                (bc_X, bc_Y), bc_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
-                bc_centre = (int(bc_X), int(bc_Y))
-                cv2.circle(composite_image, bc_centre, int(bc_radius + scaled_shot_radius), (0, 255, 255), 2)
-
-                actual_spread = convert_to_real(2 * bc_radius, target_diameter, video_height) # (mm)
-                cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
+            draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
         else:
             calibration_shots.append(recorded_shot_loc)
+            if debug_level > 0:
+                # Mark the calibration shot position
+                # TODO: Make this the default? Would need to unplot on undo
+                cv2.circle(composite_image, recorded_shot_loc, 1, shot_colour, -1)
             
-
         # Remember to do anything else required with the recorded shot location here (eg csv output)
         recorded_shot_loc = ()
 
@@ -331,6 +339,11 @@ while True:
     elif key_press == ord(' '):
         # Undo last shot
         if (shots_fired > calibration_shots_req):
-            composite_shots.pop()
+            shots_fired = max(shots_fired - 1, calibration_shots_req + 1)
+            composite_shots.pop() if len(composite_shots) >= 1 else None
+            composite_image = blank_target_image.copy()
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
+            draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)         
         else:
+            shots_fired = max(shots_fired - 1, 0)
             calibration_shots.pop() if len(calibration_shots) > 1 else None
