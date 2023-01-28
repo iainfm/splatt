@@ -23,7 +23,7 @@ from splatt_functions import *
 
 def initialise_trace(clear_composite: bool):
     # Clear the trace and reload target_image
-    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired, this_shot_time, shots_fired, calibration_shots_req, calibrated
+    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired, this_shot_time, shots_fired, calibrated
     stored_trace = []
     recorded_shot_loc = ()
     line_colour = []
@@ -31,12 +31,8 @@ def initialise_trace(clear_composite: bool):
     target_image = blank_target_image.copy()
     if clear_composite:
         composite_image = blank_target_image.copy()
-        calibrated = False
     auto_reset_time_expired = False
     this_shot_time = time()
-
-    if shots_fired >= calibration_shots_req:
-        calibrated = True
 
 # video capture object
 video_capture = cv2.VideoCapture(video_capture_device, cv2.CAP_DSHOW)
@@ -70,6 +66,7 @@ audio_stream = sd.Stream(
 # Shot tracking
 shot_fired = False
 shots_fired = 0
+calibrated = False
 # first_shot = True
 
 # Open target png  and create target_image and composite_image based on video frame size
@@ -104,13 +101,16 @@ assert audio_stream.active
 initialise_trace(True)
 
 def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
+    global video_width, video_height
     shots_plotted = 0
     for recorded_shot in composite_shots:
+        shot_text = 'Shot ' + str(shots_plotted + 1) + ':' + str(calculate_shot_score(recorded_shot, video_width, video_height))
+        cv2.putText(composite_image, shot_text, (5, 50 + (25 * shots_plotted)), font, 1, (0, 0, 0), 1, 1)
         shots_plotted += 1
         composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
         cv2.circle(composite_image, recorded_shot, scaled_shot_radius, composite_colour, line_thickness)
                 
-                # Number the shot on the composite image
+        # Number the shot on the composite image
         text_size = cv2.getTextSize(str(shots_plotted), font, font_scale, font_thickness)[0]
         text_X = int((recorded_shot[0] - (text_size[0]) / 2))
         text_Y = int((recorded_shot[1] + (text_size[1]) / 2))
@@ -128,6 +128,25 @@ def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image
         actual_spread = convert_to_real(2 * bc_radius, target_diameter, video_height) # (mm)
         cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
 
+
+def calculate_shot_score(shot_loc, video_width, video_height):
+    # Determine the score of the shot by scoring ring diameter / shot position / bullet size
+    real_x = convert_to_real(shot_loc[0] - (video_width / 2), target_diameter, video_height)
+    real_y = convert_to_real(shot_loc[1] - (video_height / 2), target_diameter, video_height)
+    real_r = ((real_x * real_x + real_y * real_y) ** 0.5)
+    if target_scoring_scheme == outward:
+        real_r += (shot_calibre / 2)
+    else:
+        real_r -= (shot_calibre / 2)
+        
+    if real_r > target_scoring_rings[len(target_scoring_rings) - 1]:
+        score = 0
+    else:
+        score = 10
+        for scoring_ring in target_scoring_rings:
+            if real_r > scoring_ring / 2:
+                score = max(score - 1, 0)
+    return score
 
 ################################################## Main Loop ##################################################
 
@@ -161,13 +180,11 @@ while True:
         # Offset the location based on the calibration
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
         max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
-        
-        if shots_fired >= calibration_shots_req:
+
+        if calibrated:
             # Scale based on the virtual / real range distances, limited to video frame dimensions
             max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
             max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
-
-            # Store the scaled coordinates (unless it's the calibration 'shot')
             max_loc = (max_loc_x, max_loc_y)
         
         # Add the discovered point to our list with the initial line colour
@@ -210,37 +227,19 @@ while True:
 
         cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
 
-        if shots_fired > calibration_shots_req:
+        composite_shots.append(recorded_shot_loc)
+        composite_image = blank_target_image.copy()
 
-            composite_shots.append(recorded_shot_loc)
-
-            composite_image = blank_target_image.copy()
-            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
-            draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
-
-        else:
-            calibration_shots.append(recorded_shot_loc)
-            if debug_level > 0:
-                # Mark the calibration shot position
-                # TODO: Make this the default? Would need to unplot on undo
-                cv2.circle(composite_image, recorded_shot_loc, 1, shot_colour, -1)
+        draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
+        draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
             
         # Remember to do anything else required with the recorded shot location here (eg csv output)
+
+        print(calculate_shot_score(recorded_shot_loc, video_width, video_height))   
+        
         recorded_shot_loc = ()
 
-        if shots_fired == calibration_shots_req:
-            # Calibrate the system and clear the results
-            
-            # Find the spread of calibration shots
-            (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(calibration_shots))
-            calib_XY = calibrate_offset(video_width, video_height, cal_X, cal_Y)
-
-            # Plot a circle to show the calibration data
-            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
-            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), int(cal_radius), (0, 255, 255), 2)
-            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), 2, (0, 255, 255), 2)
-
-    if shots_fired < calibration_shots_req:
+    if not calibrated:
         cv2.putText(target_image, 'CALIBRATING', (5, 25), font, 2, (0, 0, calib_text_red), 1, 1)
         
         # Fancy calibration font colout
@@ -264,14 +263,12 @@ while True:
     cv2.imshow('Splatt - Blurred Vision', grey_image) if debug_level > 0 else None
 
     if auto_reset_time_expired:
-        if (shots_fired <= shots_per_series + calibration_shots_req - 1):
+        if (shots_fired <= shots_per_series - 1):
             initialise_trace(False)
         else:
             cv2.waitKey(series_reset_pause * 1000)
             composite_shots = []
-            shots_fired = calibration_shots_req
-            initialise_trace(True)
-        if  shots_fired == calibration_shots_req:
+            shots_fired = 0
             initialise_trace(True)
 
     # Check for user input
@@ -320,7 +317,6 @@ while True:
     
     elif key_press == ord('r'):
         # Reset for recalibration
-        calibration_shots = []
         composite_shots = []
         calib_XY = (0, 0)
         calibrated = False
@@ -338,12 +334,26 @@ while True:
 
     elif key_press == ord(' '):
         # Undo last shot
-        if (shots_fired > calibration_shots_req):
-            shots_fired = max(shots_fired - 1, calibration_shots_req + 1)
-            composite_shots.pop() if len(composite_shots) >= 1 else None
-            composite_image = blank_target_image.copy()
-            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
-            draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)         
-        else:
-            shots_fired = max(shots_fired - 1, 0)
-            calibration_shots.pop() if len(calibration_shots) > 1 else None
+        shots_fired = max(shots_fired - 1, 0)
+        composite_shots.pop() if len(composite_shots) >= 1 else None
+        composite_image = blank_target_image.copy()
+        draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
+        draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)         
+    
+    elif key_press == 13:
+        # User has finished calibrating
+        if shots_fired > 0:
+            calibrated = True
+            # Find the spread of calibration shots
+            (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
+            calib_XY = calibrate_offset(video_width, video_height, cal_X, cal_Y)
+
+            # Plot a circle to show the calibration data
+            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), int(cal_radius), (0, 255, 255), 2)
+            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), 2, (0, 255, 255), 2)
+
+            # Reset the range
+            shots_fired = 0
+            composite_shots = []
+            initialise_trace(True)
