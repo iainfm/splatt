@@ -23,7 +23,7 @@ from splatt_functions import *
 
 def initialise_trace(clear_composite: bool):
     # Clear the trace and reload target_image
-    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, shots_fired, auto_reset_time_expired, this_shot_time, shots_fired, calibrated
+    global stored_trace, recorded_shot_loc, line_colour, shot_fired, target_image, composite_image, auto_reset_time_expired, this_shot_time
     stored_trace = []
     recorded_shot_loc = ()
     line_colour = []
@@ -253,7 +253,7 @@ while True:
 
     else:
         if calibrated and display_shot_time:
-            text = "%04.1f" % (time() - this_shot_time, )
+            text = "%04.2f" % (time() - this_shot_time, )
             text_size = cv2.getTextSize(text, font, 2, font_thickness)[0]
             cv2.rectangle(target_image, (3, 23), (7 + text_size[0], 27 + text_size[1]), (0, 0, 0), -1)
             cv2.putText(target_image, text, (5, 26 + text_size[1]), font, 2, (255, 255, 255), 1, 1, False)
