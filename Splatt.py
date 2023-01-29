@@ -69,30 +69,22 @@ shots_fired = 0
 calibrated = False
 # first_shot = True
 
-# Open target png  and create target_image and composite_image based on video frame size
-target_file_image = cv2.imread(target_filename)
 
-# Target image should be square for scaling etc to work properly
-print('Warning: Target image is not square') if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
+def setup_targets(video_width, video_height):
+    target_file_image = cv2.imread(target_filename)
 
-# Resize the target image to fit the video frame
-target_file_image = cv2.resize(target_file_image, (video_height, video_height))
+    # Target image should be square for scaling etc to work properly
+    print('Warning: Target image is not square') if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
 
-# Create a new blank target image
-blank_target_image = np.zeros([video_height, video_width, 3], dtype = np.uint8)
+    target_file_image = cv2.resize(target_file_image, (video_height, video_height))   # Resize the target image to fit the video frame
+    blank_target_image = np.zeros([video_height, video_width, 3], dtype = np.uint8)   # Create a new blank target image
+    blank_target_image[:, :] = target_file_image[1:2, 1:2]                            # And colour it the same as the bottom-left (is it?) pixel of the target file
+    target_offset = int(blank_target_image.shape[1]/2 - target_file_image.shape[1]/2) # Calculate the horizontal offset for centering the target image within the frame
+    blank_target_image[0:target_file_image.shape[1], target_offset:target_file_image.shape[0] + target_offset] = target_file_image # Copy the target file into the blank target image
+    return target_file_image, blank_target_image
 
-# And colour it the same as the bottom-left (is it?) pixel of the target file
-blank_target_image[:, :] = target_file_image[1:2, 1:2]
-
-# Calculate the horizontal offset for centering the target image within the frame
-target_offset = int(blank_target_image.shape[1]/2 - target_file_image.shape[1]/2)
-
-# Copy the target file into the blank target image
-blank_target_image[0:target_file_image.shape[1], target_offset:target_file_image.shape[0] + target_offset] = target_file_image
-
-# Copy the blank target image to the two images we use for display
-# target_image = blank_target_image.copy()
-# composite_image = blank_target_image.copy()
+# Create the target bitmaps
+target_file_image, blank_target_image = setup_targets(video_width, video_height)
 
 # Start listening and check it started
 audio_stream.start()
@@ -171,7 +163,8 @@ while True:
 
     # If minimum brightness not met skip the rest of the loop
     if max_brightness > detection_threshold:
-        # TODO: On-screen indicator of whether the detection threshold is met
+        # Add an on-screen indicator to show the range is hot
+        cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (0, 0, 255), -1)
         
         # Check for click
         audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
@@ -190,6 +183,9 @@ while True:
         # Add the discovered point to our list with the initial line colour
         stored_trace.append((max_loc_x, max_loc_y))
         line_colour.append(init_line_colour)
+    else:
+        # Add an on-screen indicator to show the range is not hot
+        cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (127, 127, 127), -1)
 
     # Append the new frame
     video_frames.append(target_image.copy()) if record_video else None
