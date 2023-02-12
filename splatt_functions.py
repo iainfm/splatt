@@ -11,3 +11,12 @@ def convert_to_pixels(size_in_mm, target_diameter, video_height: int) -> int:
 def convert_to_real(size_in_pixels, target_diameter, video_height:int):
     # Convert size measured in pixels to real-world dimensions based on target_size:image_height
     return size_in_pixels * target_diameter / video_height
+
+def arrays_match(arr1, arr2, tolerance):
+    # As suggested by ChatGPT :-o
+    if len(arr1) != len(arr2):
+        return False
+    for i in range(len(arr1)):
+        if abs(arr1[i] - arr2[i]) > tolerance:
+            return False
+    return True
