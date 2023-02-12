@@ -133,7 +133,7 @@ def calculate_shot_score(shot_loc, video_width, video_height):
 
     score = 0    
     for i, scoring_ring in enumerate(target_scoring_rings):
-        if real_r <= scoring_ring:
+        if real_r <= scoring_ring / 2:
             score = 10 - i
             break
 

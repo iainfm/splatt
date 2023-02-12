@@ -1,0 +1,6 @@
+.git
+__pycache__
+*.avi
+*.pyc
+*.wav
+*.pkl
