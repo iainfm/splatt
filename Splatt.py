@@ -166,9 +166,15 @@ while True:
         cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (0, 0, 255), -1)
         
         # Check for click
-        audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
-        volume_norm = np.linalg.norm(audio_data[:, 0]) * 10
-        
+        raw_audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
+        audio_data = raw_audio_data[:, 0]
+        volume_norm = np.linalg.norm(audio_data) * 10
+
+        # Get the peak audio frequency
+        audio_data = audio_data / np.max(audio_data)
+        fft_data = abs(np.fft.rfft(audio_data))
+        peak_frequency = np.argmax(fft_data)
+
         # Offset the location based on the calibration
         max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
         max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
@@ -195,8 +201,8 @@ while True:
 
         if not shot_fired:
 
-            # Check audio levels TODO: FFT analysis
-            if volume_norm >= click_threshold:
+            # Check audio level and peak frequency
+            if (volume_norm >= click_threshold):
                 recorded_shot_loc = max_loc
                 shot_fired = True
                 shots_fired += 1

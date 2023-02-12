@@ -23,7 +23,7 @@ def butter_highpass_filter(data, cutoff, fs, order=5):
 # Filter requirements.
 order = 5
 fs = 44100.0       # sample rate, Hz
-cutoff = 6000  # desired cutoff frequency of the filter, Hz
+cutoff = 10000  # desired cutoff frequency of the filter, Hz
 T = 1.0
 CHUNK = 4096 # int(T * fs)
 
@@ -106,16 +106,22 @@ else:
       volume_norm = np.linalg.norm(indata[:, 0]) * 10
 
     if any(indata):
-      volume_norm = 0
+      
       # fldata = butter_highpass_filter(indata[:, 0], cutoff, fs, order)
       # fldata = fldata / np.max(fldata) # Normalise
       fldata = indata[:, 0]
-      fldata = fldata / np.max(fldata)
+      # fldata = fldata / np.max(fldata)
+      print(len(fldata))
       fft_data = abs(np.fft.rfft(fldata))
-
-      print('peak freq:', np.argmax(fft_data))
+    
+      # plt.plot(fft_data / np.max(fft_data))
+      # plt.show()
+      # fft_data = fft_data[100:]
+      peak_frequency = np.argmax(fft_data)
+      trigger_frequency = 790
+      trigger_threshold = 10
+      print('volume:', volume_norm, 'peak freq:', peak_frequency, 'max: ', fft_data[peak_frequency])
       
-      #if arrays_match(fingerprint_data, fft_data, 10):
-        #print("click")
-      if (waveform_similarity(fft_data, fingerprint_data) > 150):
-        print("click")
+      volume_norm = 0
+      if abs(peak_frequency - trigger_frequency) < trigger_threshold:
+        print("Shot fired")
