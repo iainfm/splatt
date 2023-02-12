@@ -15,15 +15,13 @@ auto_reset_time = 3         # Number of seconds after the shot before resetting
 shots_per_series = 5        # How many shots before auto-resetting
 series_reset_pause = 3      # seconds to pause before starting a new series
 target_index = 0            # Target to use (see below)
-inward = True               # How gauging
-outward = not inward        # is defined
 
 # Target dimensions
 # (name, diameter (mm), filename, simulated_range_length, (ring scores hi->low), gauging)
 # TODO: add dimensions for scoring rings
-target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25, (12.92, 20.23, 27.55, 34.86, 42.18, 49.49, 56.81, 64.12, 71.44, 78.75), outward),
-          ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50, (9.03, 23.66, 38.29, 52.92, 67.55, 82.18, 96.81), inward),
-          ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png', 100, (26.48, 57.32, 88.16, 119.00, 149.84, 180.68, 211.52, 242.36, 273.20), inward))
+target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25, (12.92, 20.23, 27.55, 34.86, 42.18, 49.49, 56.81, 64.12, 71.44, 78.75), 'outward'),
+          ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50, (9.03, 23.66, 38.29, 52.92, 67.55, 82.18, 96.81), 'inward'),
+          ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png', 100, (26.48, 57.32, 88.16, 119.00, 149.84, 180.68, 211.52, 242.36, 273.20), 'inward'))
 
 target_name = target[target_index][0]
 target_diameter = target[target_index][1]

@@ -134,18 +134,17 @@ def calculate_shot_score(shot_loc, video_width, video_height):
     real_x = convert_to_real(shot_loc[0] - (video_width / 2), target_diameter, video_height)
     real_y = convert_to_real(shot_loc[1] - (video_height / 2), target_diameter, video_height)
     real_r = ((real_x * real_x + real_y * real_y) ** 0.5)
-    if target_scoring_scheme == outward:
+    if target_scoring_scheme == 'outward':
         real_r += (shot_calibre / 2)
     else:
         real_r -= (shot_calibre / 2)
-        
-    if real_r > target_scoring_rings[len(target_scoring_rings) - 1]:
-        score = 0
-    else:
-        score = 10
-        for scoring_ring in target_scoring_rings:
-            if real_r > scoring_ring / 2:
-                score = max(score - 1, 0)
+
+    score = 0    
+    for i, scoring_ring in enumerate(target_scoring_rings):
+        if real_r <= scoring_ring:
+            score = 10 - i
+            break
+
     return score
 
 ################################################## Main Loop ##################################################
