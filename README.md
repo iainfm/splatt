@@ -98,6 +98,10 @@ S - Save the composite image (static filename at the moment; on the to-do list)
 
 V - start/stop video recording (static filename at the moment; on the to-do list)
 
+Space - Remove last shot
+
+Enter - End calibration mode and start scored / scaled shooting mode
+
 ## Disclaimer
 
 Use at your own risk. The author accepts no responsibility for the use or misuse of this system. Never fire live rounds except on an authorised range, following all safety regulations.
