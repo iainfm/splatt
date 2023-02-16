@@ -52,8 +52,11 @@ Some way of attaching either the webcam or laser source to the firearm being use
 ## Rough notes on installation:
 
 Install  python3 and pip, depending on your OS and distribution
+
 pip install numpy
+
 pip install opencv-python
+
 pip install sounddevice
 
 ## Usage (Draft)
