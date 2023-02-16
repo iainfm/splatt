@@ -77,11 +77,11 @@ Start Splatt with
 
 Wait for it to initialise
 
-Aim at the target and shoot the required number of calibration shots
+Aim at the target and shoot a suitable number of calibration shots
 
 Aim away from the light source while reloading / re-cocking to avoid spurious shot detections
 
-After the calibration shots have been completed the calibration offset and scaling of movement will be applied.
+After the calibration shots have been completed press enter to start shooting mode - the calibration offset and scaling of movement will be applied.
 
 Continue to shoot as required.
 
