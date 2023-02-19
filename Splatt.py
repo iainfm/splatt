@@ -34,6 +34,22 @@ def initialise_trace(clear_composite: bool):
     auto_reset_time_expired = False
     this_shot_time = time()
 
+# Audio callback function
+def process_audio(indata, frames, time, status):
+    global shot_detected
+    if any(indata):
+        audio_data = indata[:, 0]
+        max_volume = np.max(np.abs(audio_data))
+        audio_data_normalised = audio_data / np.max(audio_data)
+        fft_data = np.abs(np.fft.rfft(audio_data_normalised))
+        # volume_norm = np.linalg.norm(audio_data) * 10
+        if (max_volume > 0.5):
+            # TODO: Tune this and add clause for FFT result
+            shot_detected = True
+            print(max_volume, '\t', np.argmax(fft_data), len(fft_data)) if debug_level > 1 else None
+        else:
+            shot_detected = False
+            
 # video capture object
 video_capture = cv2.VideoCapture(video_capture_device, cv2.CAP_DSHOW)
 
@@ -57,17 +73,17 @@ font_scale = np.ceil( scaled_shot_radius / 13 )
 print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.') if debug_level > 0 else None
 print(sd.query_devices()) if debug_level > 0 else None # Choose device numbers from here. TODO: Get/save config / -l(ist) option
 
-audio_stream = sd.Stream(
-  device = None,
-  samplerate = 44100,
-  channels = 1,
-  blocksize = audio_chunk_size)
+#audio_stream = sd.Stream(
+#  device = None,
+#  samplerate = 44100,
+#  channels = 1,
+#  blocksize = audio_chunk_size)
 
 # Shot tracking
 shot_fired = False
 shots_fired = 0
 calibrated = False
-# first_shot = True
+shot_detected = False
 
 
 def setup_targets(video_width, video_height):
@@ -87,8 +103,8 @@ def setup_targets(video_width, video_height):
 target_file_image, blank_target_image = setup_targets(video_width, video_height)
 
 # Start listening and check it started
-audio_stream.start()
-assert audio_stream.active
+# audio_stream.start()
+# assert audio_stream.active
 
 initialise_trace(True)
 
@@ -141,220 +157,210 @@ def calculate_shot_score(shot_loc, video_width, video_height):
 
 ################################################## Main Loop ##################################################
 
-while True:
+with sd.InputStream(samplerate = 44100, channels = 1, device = None, callback = process_audio, blocksize = 4410):
+    while True:
 
-    # Get the video frame
-    video_ret, video_frame = video_capture.read()
-    captured_image = video_frame.copy()
+        # Get the video frame
+        video_ret, video_frame = video_capture.read()
+        captured_image = video_frame.copy()
 
-    # If set, flip the image
-    if captured_image_flip_needed:
-        captured_image = cv2.flip(captured_image, -1)
+        # If set, flip the image
+        if captured_image_flip_needed:
+            captured_image = cv2.flip(captured_image, -1)
 
-    # grey-ify the image and apply a Gaussian blur to the image
-    grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
-    grey_image = cv2.GaussianBlur(grey_image, (blur_radius, blur_radius), 0)
+        # grey-ify the image and apply a Gaussian blur to the image
+        grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
+        grey_image = cv2.GaussianBlur(grey_image, (blur_radius, blur_radius), 0)
 
-    # Find the point of max brightness
-    (min_brightness, max_brightness, min_loc, max_loc) = cv2.minMaxLoc(grey_image)
+        # Find the point of max brightness
+        (min_brightness, max_brightness, min_loc, max_loc) = cv2.minMaxLoc(grey_image)
 
-    print(max_brightness, '@', max_loc) if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
+        print(max_brightness, '@', max_loc) if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
 
-    # If minimum brightness not met skip the rest of the loop
-    if max_brightness > detection_threshold:
-        # Add an on-screen indicator to show the range is hot
-        cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (0, 0, 255), -1)
-        
-        # Check for click
-        raw_audio_data, audio_overflowed = audio_stream.read(audio_chunk_size)
-        audio_data = raw_audio_data[:, 0]
-        volume_norm = np.linalg.norm(audio_data) * 10
-
-        # Get the peak audio frequency
-        audio_data = audio_data / np.max(audio_data)
-        fft_data = abs(np.fft.rfft(audio_data))
-        peak_frequency = np.argmax(fft_data)
-
-        # Offset the location based on the calibration
-        max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
-        max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
-
-        if calibrated:
-            # Scale based on the virtual / real range distances, limited to video frame dimensions
-            max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
-            max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
-            max_loc = (max_loc_x, max_loc_y)
-        
-        # Add the discovered point to our list with the initial line colour
-        stored_trace.append((max_loc_x, max_loc_y))
-        line_colour.append(init_line_colour)
-    else:
-        # Add an on-screen indicator to show the range is not hot
-        cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (127, 127, 127), -1)
-
-    # Append the new frame
-    video_frames.append(target_image.copy()) if record_video else None
-
-    # Plot the line traces so far
-    for n in range(1, len(stored_trace)):
-        this_line_colour = list(line_colour[n])
-
-        if not shot_fired:
-
-            # Check audio level and peak frequency
-            if (volume_norm >= click_threshold):
-                recorded_shot_loc = max_loc
-                shot_fired = True
-                shots_fired += 1
-                shot_time = time() + auto_reset_time
-
-            # Change the colour of the traces based on colour_change_rate[]
-            for c in range (0,3):
-                this_line_colour[c] = this_line_colour[c] + colour_change_rate[c]
-                if this_line_colour[c] > 255:
-                    this_line_colour[c] = 255
-                elif this_line_colour[c] < 0:
-                    this_line_colour[c] = 0
-            line_colour[n] = tuple(this_line_colour)
-        else:
-            auto_reset_time_expired = True if time() > shot_time else False
-
-        # Draw a line from the previous point to this one
-        cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
-
-    # Draw the shot circle if the shot has been taken TODO: Check whether it looks better to plot this under the trace
-
-    if recorded_shot_loc:
-
-        cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
-
-        composite_shots.append(recorded_shot_loc)
-        composite_image = blank_target_image.copy()
-
-        draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
-        draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
+        # If minimum brightness not met skip the rest of the loop
+        if max_brightness > detection_threshold:
+            # Add an on-screen indicator to show the range is hot
+            cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (0, 0, 255), -1)
             
-        # Remember to do anything else required with the recorded shot location here (eg csv output)
+            # Offset the location based on the calibration
+            max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
+            max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
 
-        print(calculate_shot_score(recorded_shot_loc, video_width, video_height))   
-        
-        recorded_shot_loc = ()
-
-    if not calibrated:
-        cv2.putText(target_image, 'CALIBRATING', (5, 25), font, 2, (0, 0, calib_text_red), 1, 1)
-        
-        # Fancy calibration font colout
-        calib_text_red += d_calib_text_red
-        if calib_text_red > 255:
-            calib_text_red = 255
-            d_calib_text_red = -8
-        elif calib_text_red < calib_text_red_min:
-            calib_text_red = calib_text_red_min
-            d_calib_text_red = 8
-
-    else:
-        if calibrated and display_shot_time:
-            text = "%04.2f" % (time() - this_shot_time, )
-            text_size = cv2.getTextSize(text, font, 2, font_thickness)[0]
-            cv2.rectangle(target_image, (3, 23), (7 + text_size[0], 27 + text_size[1]), (0, 0, 0), -1)
-            cv2.putText(target_image, text, (5, 26 + text_size[1]), font, 2, (255, 255, 255), 1, 1, False)
-
-    cv2.imshow('Splatt - Live trace', target_image)
-    cv2.imshow('Splatt - Composite', composite_image)
-    cv2.imshow('Splatt - Blurred Vision', grey_image) if debug_level > 0 else None
-
-    if auto_reset_time_expired:
-        if (shots_fired <= shots_per_series - 1):
-            initialise_trace(False)
+            if calibrated:
+                # Scale based on the virtual / real range distances, limited to video frame dimensions
+                max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
+                max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
+                max_loc = (max_loc_x, max_loc_y)
+            
+            # Add the discovered point to our list with the initial line colour
+            stored_trace.append((max_loc_x, max_loc_y))
+            line_colour.append(init_line_colour)
         else:
-            cv2.waitKey(series_reset_pause * 1000)
+            # Add an on-screen indicator to show the range is not hot
+            cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (127, 127, 127), -1)
+
+        # Append the new frame
+        video_frames.append(target_image.copy()) if record_video else None
+
+        # Plot the line traces so far
+        for n in range(1, len(stored_trace)):
+            this_line_colour = list(line_colour[n])
+
+            if not shot_fired:
+
+                # Check audio level and peak frequency
+                if shot_detected:
+                    recorded_shot_loc = max_loc
+                    shot_fired = True
+                    shots_fired += 1
+                    shot_time = time() + auto_reset_time
+                    shot_detcted = False # Reset
+
+                # Change the colour of the traces based on colour_change_rate[]
+                for c in range (0,3):
+                    this_line_colour[c] = this_line_colour[c] + colour_change_rate[c]
+                    if this_line_colour[c] > 255:
+                        this_line_colour[c] = 255
+                    elif this_line_colour[c] < 0:
+                        this_line_colour[c] = 0
+                line_colour[n] = tuple(this_line_colour)
+            else:
+                auto_reset_time_expired = True if time() > shot_time else False
+
+            # Draw a line from the previous point to this one
+            cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
+
+        # Draw the shot circle if the shot has been taken TODO: Check whether it looks better to plot this under the trace
+
+        if recorded_shot_loc:
+
+            cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
+
+            composite_shots.append(recorded_shot_loc)
+            composite_image = blank_target_image.copy()
+
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
+            draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
+                
+            # Remember to do anything else required with the recorded shot location here (eg csv output)
+
+            print(calculate_shot_score(recorded_shot_loc, video_width, video_height))   
+            
+            recorded_shot_loc = ()
+
+        if not calibrated:
+            cv2.putText(target_image, 'CALIBRATING', (5, 25), font, 2, (0, 0, calib_text_red), 1, 1)
+            
+            # Fancy calibration font colout
+            calib_text_red += d_calib_text_red
+            if calib_text_red > 255:
+                calib_text_red = 255
+                d_calib_text_red = -8
+            elif calib_text_red < calib_text_red_min:
+                calib_text_red = calib_text_red_min
+                d_calib_text_red = 8
+
+        else:
+            if calibrated and display_shot_time:
+                text = "%04.2f" % (time() - this_shot_time, )
+                text_size = cv2.getTextSize(text, font, 2, font_thickness)[0]
+                cv2.rectangle(target_image, (3, 23), (7 + text_size[0], 27 + text_size[1]), (0, 0, 0), -1)
+                cv2.putText(target_image, text, (5, 26 + text_size[1]), font, 2, (255, 255, 255), 1, 1, False)
+
+        cv2.imshow('Splatt - Live trace', target_image)
+        cv2.imshow('Splatt - Composite', composite_image)
+        cv2.imshow('Splatt - Blurred Vision', grey_image) if debug_level > 0 else None
+
+        if auto_reset_time_expired:
+            if (shots_fired <= shots_per_series - 1):
+                initialise_trace(False)
+            else:
+                cv2.waitKey(series_reset_pause * 1000)
+                composite_shots = []
+                shots_fired = 0
+                initialise_trace(True)
+
+        # Check for user input
+        key_press = cv2.waitKey(1) & 0xFF
+        
+        if key_press == ord('q'):
+            # Quit
+            video_capture.release()
+            exit()
+
+        elif key_press == ord('c'):
+            # Clear the trace
+            initialise_trace(True)
             composite_shots = []
+        
+        elif key_press == ord('v'):
+            # Start recording
+            if not record_video:
+                video_start_time = time()
+                video_frames = []
+                record_video = True
+                print('Recording started')
+            else:
+                # Save the video
+                # Define the codec and create VideoWriter object
+                video_length = time() - video_start_time
+                video_fps = int(len(video_frames) / video_length)
+                four_cc = cv2.VideoWriter_fourcc(*'XVID')
+                video_out = cv2.VideoWriter(video_output_file, four_cc, video_fps, video_size)
+
+                for frame in video_frames:
+                    video_out.write(frame)
+
+                record_video = False
+                print('Recording saved as:', video_output_file)
+        
+        elif key_press == ord('d'):
+            # Increase debug level
+            debug_level += 1
+            if debug_level > debug_max:
+                cv2.destroyWindow("Splatt - Blurred Vision")
+                debug_level = 0
+            print('Debug level:', int(debug_level))
+        
+        elif key_press == ord('r'):
+            # Reset for recalibration
+            composite_shots = []
+            calib_XY = (0, 0)
+            calibrated = False
             shots_fired = 0
             initialise_trace(True)
 
-    # Check for user input
-    key_press = cv2.waitKey(1) & 0xFF
-    
-    if key_press == ord('q'):
-        # Quit
-        video_capture.release()
-        audio_stream.close()
-        # TODO: close video file if open as well?
-        break
+        elif key_press == ord('s'):
+            # Save the composite image (and clear it?)
+            cv2.imwrite(composite_output_file, composite_image)
+        
+        elif key_press == ord('f'):
+            # Change the flip mode
+            captured_image_flip_needed = not captured_image_flip_needed
+            print('Flip required:', captured_image_flip_needed)
 
-    elif key_press == ord('c'):
-        # Clear the trace
-        initialise_trace(True)
-        composite_shots = []
-    
-    elif key_press == ord('v'):
-        # Start recording
-        if not record_video:
-            video_start_time = time()
-            video_frames = []
-            record_video = True
-            print('Recording started')
-        else:
-            # Save the video
-            # Define the codec and create VideoWriter object
-            video_length = time() - video_start_time
-            video_fps = int(len(video_frames) / video_length)
-            four_cc = cv2.VideoWriter_fourcc(*'XVID')
-            video_out = cv2.VideoWriter(video_output_file, four_cc, video_fps, video_size)
+        elif key_press == ord(' '):
+            # Undo last shot
+            shots_fired = max(shots_fired - 1, 0)
+            composite_shots.pop() if len(composite_shots) >= 1 else None
+            composite_image = blank_target_image.copy()
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
+            draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)         
+        
+        elif key_press == 13:
+            # User has finished calibrating
+            if shots_fired > 0:
+                calibrated = True
+                # Find the spread of calibration shots
+                (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
+                calib_XY = calibrate_offset(video_width, video_height, cal_X, cal_Y)
 
-            for frame in video_frames:
-                video_out.write(frame)
+                # Plot a circle to show the calibration data
+                print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+                cv2.circle(target_image, ((int(cal_X), int(cal_Y))), int(cal_radius), (0, 255, 255), 2)
+                cv2.circle(target_image, ((int(cal_X), int(cal_Y))), 2, (0, 255, 255), 2)
 
-            record_video = False
-            print('Recording saved as:', video_output_file)
-    
-    elif key_press == ord('d'):
-        # Increase debug level
-        debug_level += 1
-        if debug_level > debug_max:
-            cv2.destroyWindow("Splatt - Blurred Vision")
-            debug_level = 0
-        print('Debug level:', int(debug_level))
-    
-    elif key_press == ord('r'):
-        # Reset for recalibration
-        composite_shots = []
-        calib_XY = (0, 0)
-        calibrated = False
-        shots_fired = 0
-        initialise_trace(True)
-
-    elif key_press == ord('s'):
-        # Save the composite image (and clear it?)
-        cv2.imwrite(composite_output_file, composite_image)
-    
-    elif key_press == ord('f'):
-        # Change the flip mode
-        captured_image_flip_needed = not captured_image_flip_needed
-        print('Flip required:', captured_image_flip_needed)
-
-    elif key_press == ord(' '):
-        # Undo last shot
-        shots_fired = max(shots_fired - 1, 0)
-        composite_shots.pop() if len(composite_shots) >= 1 else None
-        composite_image = blank_target_image.copy()
-        draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
-        draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)         
-    
-    elif key_press == 13:
-        # User has finished calibrating
-        if shots_fired > 0:
-            calibrated = True
-            # Find the spread of calibration shots
-            (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
-            calib_XY = calibrate_offset(video_width, video_height, cal_X, cal_Y)
-
-            # Plot a circle to show the calibration data
-            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
-            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), int(cal_radius), (0, 255, 255), 2)
-            cv2.circle(target_image, ((int(cal_X), int(cal_Y))), 2, (0, 255, 255), 2)
-
-            # Reset the range
-            shots_fired = 0
-            composite_shots = []
-            initialise_trace(True)
+                # Reset the range
+                shots_fired = 0
+                composite_shots = []
+                initialise_trace(True)
