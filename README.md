@@ -52,8 +52,11 @@ Some way of attaching either the webcam or laser source to the firearm being use
 ## Rough notes on installation:
 
 Install  python3 and pip, depending on your OS and distribution
+
 pip install numpy
+
 pip install opencv-python
+
 pip install sounddevice
 
 ## Usage (Draft)
@@ -74,11 +77,11 @@ Start Splatt with
 
 Wait for it to initialise
 
-Aim at the target and shoot the required number of calibration shots
+Aim at the target and shoot a suitable number of calibration shots
 
 Aim away from the light source while reloading / re-cocking to avoid spurious shot detections
 
-After the calibration shots have been completed the calibration offset and scaling of movement will be applied.
+After the calibration shots have been completed press enter to start shooting mode - the calibration offset and scaling of movement will be applied.
 
 Continue to shoot as required.
 
@@ -97,6 +100,10 @@ R - Reset and begin again from scratch (ie restart calibration process)
 S - Save the composite image (static filename at the moment; on the to-do list)
 
 V - start/stop video recording (static filename at the moment; on the to-do list)
+
+Space - Remove last shot
+
+Enter - End calibration mode and start scored / scaled shooting mode
 
 ## Disclaimer
 

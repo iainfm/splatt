@@ -4,3 +4,11 @@ __pycache__
 *.pyc
 *.wav
 *.pkl
+allfilter.py
+.gitignore
+composite_25y.png
+composite_50.png
+highpass.py
+minenccircle.py
+centretext.py
+composite_100y.png
