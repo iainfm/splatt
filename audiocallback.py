@@ -38,7 +38,7 @@ try:
             max_volume = np.max(np.abs(audio_data))
             audio_data_normalised = audio_data / np.max(audio_data)
             fft_data = np.abs(np.fft.rfft(audio_data_normalised))
-            if (max_volume > 0.6):
+            if (max_volume > 0.01):
                 try:
                     print(max_volume, '\t', np.argmax(fft_data), len(fft_data))
                 except KeyboardInterrupt:
