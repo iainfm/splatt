@@ -45,7 +45,7 @@ try:
                     exit()
 
     with sd.InputStream(samplerate=args_samplerate, device=args_device,
-                        channels=args_channels, callback=callback):
+                        channels=args_channels, callback=callback, blocksize=44100 * 0.1):
         print('#' * 80)
         print('press Ctrl+C to stop the recording')
         print('#' * 80)
