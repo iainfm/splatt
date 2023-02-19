@@ -43,13 +43,13 @@ def process_audio(indata, frames, time, status):
         audio_data_normalised = audio_data / np.max(audio_data)
         fft_data = np.abs(np.fft.rfft(audio_data_normalised))
         # volume_norm = np.linalg.norm(audio_data) * 10
-        if (max_volume > 0.5):
+        print(max_volume, '\t', np.argmax(fft_data), len(fft_data)) if debug_level > 0 else None
+        if (max_volume > audio_trigger_threshold):
             # TODO: Tune this and add clause for FFT result
             shot_detected = True
-            print(max_volume, '\t', np.argmax(fft_data), len(fft_data)) if debug_level > 1 else None
         else:
             shot_detected = False
-            
+
 # video capture object
 video_capture = cv2.VideoCapture(video_capture_device, cv2.CAP_DSHOW)
 
@@ -72,12 +72,6 @@ font_scale = np.ceil( scaled_shot_radius / 13 )
 
 print(video_width , 'x' , video_height, ' @ ', video_fps, ' fps.') if debug_level > 0 else None
 print(sd.query_devices()) if debug_level > 0 else None # Choose device numbers from here. TODO: Get/save config / -l(ist) option
-
-#audio_stream = sd.Stream(
-#  device = None,
-#  samplerate = 44100,
-#  channels = 1,
-#  blocksize = audio_chunk_size)
 
 # Shot tracking
 shot_fired = False
@@ -157,7 +151,7 @@ def calculate_shot_score(shot_loc, video_width, video_height):
 
 ################################################## Main Loop ##################################################
 
-with sd.InputStream(samplerate = 44100, channels = 1, device = None, callback = process_audio, blocksize = 4410):
+with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, callback = process_audio, blocksize = 4410):
     while True:
 
         # Get the video frame
@@ -244,7 +238,7 @@ with sd.InputStream(samplerate = 44100, channels = 1, device = None, callback = 
                 
             # Remember to do anything else required with the recorded shot location here (eg csv output)
 
-            print(calculate_shot_score(recorded_shot_loc, video_width, video_height))   
+            # print(calculate_shot_score(recorded_shot_loc, video_width, video_height))   
             
             recorded_shot_loc = ()
 
