@@ -119,6 +119,6 @@ Apologies for the quality of this readme. It will improve as time goes on!
 
 Prototype Webcam arrangement
 
-![img](Images/composite.jpg)
+![img](Images/composite.png)
 
 Example composite output
