@@ -3,7 +3,7 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Hardware settings
-video_capture_device = 1 # TODO: make this better
+video_capture_device = 0 # TODO: make this better
 
 # Virtual shooting range and session options
 real_range_length = 3       # (units must match simulated range length)
@@ -19,7 +19,8 @@ target_index = 0            # Target to use (see below)
 # Target dimensions
 # (name, diameter (mm), filename, simulated_range_length, (ring scores hi->low), gauging)
 # TODO: add dimensions for scoring rings
-target = (('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25, (12.92, 20.23, 27.55, 34.86, 42.18, 49.49, 56.81, 64.12, 71.44, 78.75), 'outward'),
+target = (('15 yard prone', 30.84, '1989 15yard Outward Gauging.png', 15, (9.99, 14.38, 18.77, 23.16, 27.55, 31.93, 36.32, 40.71, 45.10, 49.49), 'outward'),
+          ('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25, (12.92, 20.23, 27.55, 34.86, 42.18, 49.49, 56.81, 64.12, 71.44, 78.75), 'outward'),
           ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50, (9.03, 23.66, 38.29, 52.92, 67.55, 82.18, 96.81), 'inward'),
           ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png', 100, (26.48, 57.32, 88.16, 119.00, 149.84, 180.68, 211.52, 242.36, 273.20), 'inward'))
 
@@ -29,6 +30,7 @@ target_filename = target[target_index][2]
 simulated_range_length = target[target_index][3]
 target_scoring_rings = target[target_index][4]
 target_scoring_scheme = target[target_index][5]
+target_folder = 'Targets'
 
 # Scaling variables
 scale_factor = simulated_range_length / real_range_length

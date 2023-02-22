@@ -71,7 +71,7 @@ calibrated = False
 
 
 def setup_targets(video_width, video_height):
-    target_file_image = cv2.imread(target_filename)
+    target_file_image = cv2.imread(target_folder + '\\' + target_filename)
 
     # Target image should be square for scaling etc to work properly
     print('Warning: Target image is not square') if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
