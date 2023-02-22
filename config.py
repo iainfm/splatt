@@ -76,8 +76,8 @@ d_calib_text_red = -2
 calib_text_red_min = 127
 
 # Sound capture parameters
-audio_chunk_size = 4096
+audio_chunk_size = 4410
 
 # Audio fingerprint of a shot being fired (FFT analysis from mictest.py)
-trigger_frequency = 300 # Anschutz 1813 dryfiring empty cases =~ 298
-trigger_threshold = 10
+audio_trigger_frequency = 300 # Anschutz 1813 dryfiring empty cases =~ 298
+audio_trigger_threshold = 0.5

@@ -29,11 +29,11 @@ Configurable flip of the captured image (for when the webcam is mounted upside d
 
 Undo last shot, in case of false detections
 
+Automatic scoring of shots based on shot location and scoring ring diameters
+
 ## Planned features
 
 Auto-saving of shot trace static and video images with filename based on session name and date/time
-
-Automatic scoring of shots based on shot location and scoring ring diameters
 
 Further analyses of shot performance and data export
 
@@ -119,6 +119,6 @@ Apologies for the quality of this readme. It will improve as time goes on!
 
 Prototype Webcam arrangement
 
-![img](Images/composite.jpg)
+![img](Images/composite.png)
 
 Example composite output
