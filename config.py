@@ -3,7 +3,7 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Hardware settings
-video_capture_device = 1 # TODO: make this better
+video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
 real_range_length = 3       # (units must match simulated range length)
@@ -14,12 +14,14 @@ auto_reset_time = 3         # Number of seconds after the shot before resetting
 # calibration_shots_req = 3 # Number of shots to average to calibrate the system (deprecated)
 shots_per_series = 5        # How many shots before auto-resetting
 series_reset_pause = 3      # seconds to pause before starting a new series
-target_index = 0            # Target to use (see below)
+target_index = 3            # Target to use (see below)
 
 # Target dimensions
 # (name, diameter (mm), filename, simulated_range_length, (ring scores hi->low), gauging)
 # TODO: add dimensions for scoring rings
-target = (('15 yard prone', 30.84, '1989 15yard Outward Gauging.png', 15, (9.99, 14.38, 18.77, 23.16, 27.55, 31.93, 36.32, 40.71, 45.10, 49.49), 'outward'),
+target = (('6 yard air rifle', 31.00, '1989 6yard Inward Gauging.png', 6, (1.00, 6.00, 11.00, 16.00, 21.00, 26.00, 31.00, 36.00, 41.00, 46.00), 'inward'),
+          ('10 metre air rifle', 31.20, '1989 10m Outward Gauging.png', 10, (8.80, 12.00, 15.20, 18.40, 21.60, 24.80, 28.00, 31.20, 34.40, 37.60), 'outward'),
+          ('15 yard prone', 30.84, '1989 15yard Outward Gauging.png', 15, (9.99, 14.38, 18.77, 23.16, 27.55, 31.93, 36.32, 40.71, 45.10, 49.49), 'outward'),
           ('25 yard prone', 51.39, '1989 25yard Outward Gauging.png', 25, (12.92, 20.23, 27.55, 34.86, 42.18, 49.49, 56.81, 64.12, 71.44, 78.75), 'outward'),
           ('50 yard prone', 102.79, '1989 50yard Inward Gauging.png', 50, (9.03, 23.66, 38.29, 52.92, 67.55, 82.18, 96.81), 'inward'),
           ('100 yard prone', 205.55, '1989 100yard Inward Gauging.png', 100, (26.48, 57.32, 88.16, 119.00, 149.84, 180.68, 211.52, 242.36, 273.20), 'inward'))
