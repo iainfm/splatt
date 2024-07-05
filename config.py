@@ -3,10 +3,10 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Hardware settings
-video_capture_device = 0    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
+video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
-real_range_length = 10      # (units must match simulated range length)
+real_range_length = 20      # (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken
@@ -82,4 +82,4 @@ audio_chunk_size = 4410
 
 # Audio fingerprint of a shot being fired (FFT analysis from mictest.py)
 audio_trigger_frequency = 300 # Anschutz 1813 dryfiring empty cases =~ 298
-audio_trigger_threshold = 0.5
+audio_trigger_threshold = 0.1
