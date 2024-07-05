@@ -106,16 +106,17 @@ def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
     global video_width, video_height
     shots_plotted = 0
     for recorded_shot in composite_shots:
-        shot_text = 'Shot ' + str(shots_plotted + 1) + ':' + str(calculate_shot_score(recorded_shot, video_width, video_height))
+        calibrated_shot = (recorded_shot[0] + calib_XY[0], recorded_shot[1] + calib_XY[1])
+        shot_text = 'Shot ' + str(shots_plotted + 1) + ':' + str(calculate_shot_score(calibrated_shot, video_width, video_height))
         cv2.putText(composite_image, shot_text, (5, 50 + (25 * shots_plotted)), font, 1, (0, 0, 0), 1, 1)
         shots_plotted += 1
         composite_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
-        cv2.circle(composite_image, recorded_shot, scaled_shot_radius, composite_colour, line_thickness)
+        cv2.circle(composite_image, calibrated_shot, scaled_shot_radius, composite_colour, line_thickness)
                 
         # Number the shot on the composite image
         text_size = cv2.getTextSize(str(shots_plotted), font, font_scale, font_thickness)[0]
-        text_X = int((recorded_shot[0] - (text_size[0]) / 2))
-        text_Y = int((recorded_shot[1] + (text_size[1]) / 2))
+        text_X = int((calibrated_shot[0] - (text_size[0]) / 2))
+        text_Y = int((calibrated_shot[1] + (text_size[1]) / 2))
 
         cv2.putText(composite_image, str(shots_plotted), 
                     (text_X, text_Y),
@@ -125,7 +126,7 @@ def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image
     # Find the bounding circle of all shots so far
     if len(composite_shots) > 1:
         (bc_X, bc_Y), bc_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
-        bc_centre = (int(bc_X), int(bc_Y))
+        bc_centre = (int(bc_X + calib_XY[0]), int(bc_Y + calib_XY[1]))
         cv2.circle(composite_image, bc_centre, int(bc_radius + scaled_shot_radius), (0, 255, 255), 2)
         actual_spread = convert_to_real(2 * bc_radius, target_diameter, video_height) # (mm)
         cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
@@ -133,8 +134,8 @@ def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image
 
 def calculate_shot_score(shot_loc, video_width, video_height):
     # Determine the score of the shot by scoring ring diameter / shot position / bullet size
-    real_x = convert_to_real(shot_loc[0] - (video_width / 2), target_diameter, video_height)
-    real_y = convert_to_real(shot_loc[1] - (video_height / 2), target_diameter, video_height)
+    real_x = convert_to_real(shot_loc[0] + calib_XY[0] - (video_width / 2), target_diameter, video_height)
+    real_y = convert_to_real(shot_loc[1] + calib_XY[1] - (video_height / 2), target_diameter, video_height)
     real_r = ((real_x * real_x + real_y * real_y) ** 0.5)
     if target_scoring_scheme == 'outward':
         real_r += (shot_calibre / 2)
@@ -177,8 +178,8 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (0, 0, 255), -1)
             
             # Offset the location based on the calibration
-            max_loc_x = int(( max_loc[0] + calib_XY[0] ) )
-            max_loc_y = int(( max_loc[1] + calib_XY[1] ) )
+            max_loc_x = int(( max_loc[0] )) # + calib_XY[0] ) )
+            max_loc_y = int(( max_loc[1] )) # + calib_XY[1] ) )
 
             if calibrated:
                 # Scale based on the virtual / real range distances, limited to video frame dimensions
@@ -197,6 +198,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         # Append the new frame
         video_frames.append(target_image.copy()) if record_video else None
 
+        target_image = blank_target_image.copy()
         # Plot the line traces so far
         for n in range(1, len(stored_trace)):
             this_line_colour = list(line_colour[n])
@@ -223,13 +225,16 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 auto_reset_time_expired = True if time() > shot_time else False
 
             # Draw a line from the previous point to this one
-            cv2.line(target_image, stored_trace[n-1], stored_trace[n], line_colour[n], line_thickness)
+            calibrated_line_start = (stored_trace[n-1][0] + calib_XY[0], stored_trace[n-1][1] + calib_XY[1])
+            calibrated_line_end = (stored_trace[n][0] + calib_XY[0], stored_trace[n][1] + calib_XY[1])
+            
+            cv2.line(target_image, calibrated_line_start, calibrated_line_end, line_colour[n], line_thickness)
 
         # Draw the shot circle if the shot has been taken TODO: Check whether it looks better to plot this under the trace
 
         if recorded_shot_loc:
-
-            cv2.circle(target_image, recorded_shot_loc, scaled_shot_radius, shot_colour, -1)
+            calibrated_shot_loc = (recorded_shot_loc[0] + calib_XY[0], recorded_shot_loc[1] + calib_XY[1])
+            cv2.circle(target_image, calibrated_shot_loc, scaled_shot_radius, shot_colour, -1)
 
             composite_shots.append(recorded_shot_loc)
             composite_image = blank_target_image.copy()
@@ -337,22 +342,30 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         elif key_press == ord('4'):
             # print('left')
             calib_XY = (calib_XY[0] - 2, calib_XY[1])
-            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+            print('Calibration offset (px):', calib_XY) if debug_level > 0 else None
+            composite_image = blank_target_image.copy()
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
 
         elif key_press == ord('6'):
             # print('right')
             calib_XY = (calib_XY[0] + 2, calib_XY[1])
-            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+            print('Calibration offset (px):', calib_XY) if debug_level > 0 else None
+            composite_image = blank_target_image.copy()
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
 
         elif key_press == ord('8'):
             # print('up')
             calib_XY = (calib_XY[0], calib_XY[1] - 2)
-            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+            print('Calibration offset (px):', calib_XY) if debug_level > 0 else None
+            composite_image = blank_target_image.copy()
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
 
         elif key_press == ord('2'):
             # print('down')
             calib_XY = (calib_XY[0], calib_XY[1] + 2)
-            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+            print('Calibration offset (px):', calib_XY) if debug_level > 0 else None
+            composite_image = blank_target_image.copy()
+            draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
 
         elif key_press == ord(' '):
             # Undo last shot

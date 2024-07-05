@@ -3,7 +3,7 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Hardware settings
-video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
+video_capture_device = 0    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
 real_range_length = 10      # (units must match simulated range length)
