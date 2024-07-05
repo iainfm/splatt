@@ -6,7 +6,7 @@ debug_max = 2     # max debug level
 video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
-real_range_length = 3       # (units must match simulated range length)
+real_range_length = 10      # (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
 auto_reset = True           # reset after shot taken

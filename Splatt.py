@@ -182,9 +182,10 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
 
             if calibrated:
                 # Scale based on the virtual / real range distances, limited to video frame dimensions
-                max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width /2 ), 0, video_width)
-                max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height /2 ), 0, video_height)
-                max_loc = (max_loc_x, max_loc_y)
+                max_loc_x = np.clip(int( scale_factor * (max_loc_x - video_width / 2) + video_width / 2 ), 0, video_width)
+                max_loc_y = np.clip(int( scale_factor * (max_loc_y - video_height / 2) + video_height / 2 ), 0, video_height)
+            
+            max_loc = (max_loc_x, max_loc_y)
             
             # Add the discovered point to our list with the initial line colour
             stored_trace.append((max_loc_x, max_loc_y))
@@ -332,6 +333,26 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             # Change the flip mode
             captured_image_flip_needed = not captured_image_flip_needed
             print('Flip required:', captured_image_flip_needed)
+
+        elif key_press == ord('4'):
+            # print('left')
+            calib_XY = (calib_XY[0] - 2, calib_XY[1])
+            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+
+        elif key_press == ord('6'):
+            # print('right')
+            calib_XY = (calib_XY[0] + 2, calib_XY[1])
+            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+
+        elif key_press == ord('8'):
+            # print('up')
+            calib_XY = (calib_XY[0], calib_XY[1] - 2)
+            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
+
+        elif key_press == ord('2'):
+            # print('down')
+            calib_XY = (calib_XY[0], calib_XY[1] + 2)
+            print('Calibration offset (px):', calib_XY) if debug_level >= 0 else None
 
         elif key_press == ord(' '):
             # Undo last shot
