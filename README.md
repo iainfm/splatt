@@ -18,6 +18,8 @@ Fine-tuning of calibration at any time
 
 Virtual shooting range configurations for different distances and disciplines
 
+Indicator to show target is acquired (red) and in the bull scoring ring (green)
+
 Audio-detection of the 'shot' with configurable threshold for dry and live firing.
 
 Auto-reset of target after the shot is taken for hands-free operation

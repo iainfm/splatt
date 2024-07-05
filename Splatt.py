@@ -199,10 +199,6 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
 
         target_image = blank_target_image.copy()
 
-        # Add an on-screen indicator to show the range is hot
-        # thickness = -1 if not paused else 1
-        thickness = -1 if not paused else 1
-        cv2.circle(target_image, (video_width - 30, video_height - 30), 20, (0, 0, 255), thickness)
         # Plot the line traces so far
         for n in range(1, len(stored_trace)):
             this_line_colour = list(line_colour[n])
@@ -233,6 +229,14 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             calibrated_line_end = np.add(stored_trace[n], calib_XY) #, stored_trace[n][1] + calib_XY[1])
             
             cv2.line(target_image, calibrated_line_start, calibrated_line_end, line_colour[n], line_thickness)
+
+        # Add an on-screen indicator to show the range is hot
+        # thickness = -1 if not paused else 1
+        indicator_thickness = -1 if not paused else 1
+        on_bull = True if calculate_shot_score(max_loc, video_width, video_height) == 10 else False
+        indicator_colour = (0, 255, 0) if on_bull else (0, 0, 255)
+
+        cv2.circle(target_image, (video_width - 30, video_height - 30), 20, indicator_colour, indicator_thickness)
 
         # Draw the shot circle if the shot has been taken TODO: Check whether it looks better to plot this under the trace
 
