@@ -245,7 +245,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         if not calibrated:
             cv2.putText(target_image, 'CALIBRATING', (5, 25), font, 2, (0, 0, calib_text_red), 1, 1)
             
-            # Fancy calibration font colout
+            # Fancy calibration font colour
             calib_text_red += d_calib_text_red
             if calib_text_red > 255:
                 calib_text_red = 255
