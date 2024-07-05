@@ -1,6 +1,7 @@
 # Splatt - a DIY target shooting trainer
 
 ![img](Images/splatt.gif)
+
 <i>What it looks like (a few versions ago) in action</i>
 
 ## Introduction
