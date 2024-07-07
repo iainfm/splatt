@@ -125,8 +125,6 @@ V - start/stop video recording (static filename at the moment; on the to-do list
 
 8 - Adjust the calibration right
 
-Future key operations:
-
 7 - Decrease the virtual range length one unit (fine tuning)
 
 9 - Increade the virtual range length one unit (fine tuning)

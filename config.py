@@ -6,19 +6,16 @@ debug_max = 2     # max debug level
 video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
-real_range_length = 20      # (units must match simulated range length)
+real_range_length = 20      # How far from your real-world shooting point to your target (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
-auto_reset = True           # reset after shot taken
 auto_reset_time = 3         # Number of seconds after the shot before resetting
-# calibration_shots_req = 3 # Number of shots to average to calibrate the system (deprecated)
 shots_per_series = 5        # How many shots before auto-resetting
 series_reset_pause = 3      # seconds to pause before starting a new series
-target_index = 3            # Target to use (see below)
+target_index = 3            # Target to use (see below). Use zero for the first target in the list, 1 for the second, etc.
 
 # Target dimensions
-# (name, diameter (mm), filename, simulated_range_length, (ring scores hi->low), gauging)
-# TODO: add dimensions for scoring rings
+# (name, diameter (mm), filename, simulated_range_length, (ring scores hi->low), gauging method (inward/outward))
 target = (('6 yard air rifle', 31.00, '1989 6yard Inward Gauging.png', 6, (1.00, 6.00, 11.00, 16.00, 21.00, 26.00, 31.00, 36.00, 41.00, 46.00), 'inward'),
           ('10 metre air rifle', 31.20, '1989 10m Outward Gauging.png', 10, (8.80, 12.00, 15.20, 18.40, 21.60, 24.80, 28.00, 31.20, 34.40, 37.60), 'outward'),
           ('15 yard prone', 30.84, '1989 15yard Outward Gauging.png', 15, (9.99, 14.38, 18.77, 23.16, 27.55, 31.93, 36.32, 40.71, 45.10, 49.49), 'outward'),
@@ -49,7 +46,6 @@ composite_output_file = 'composite.png'
 # Audio and video processing options
 blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
 detection_threshold = 50  # Trigger value to detect the reference point
-click_threshold = 50      # audio level that triggers a 'shot'
 
 # Plotting colours and options
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
@@ -60,6 +56,7 @@ display_shot_time = True # Overlay a timer onto the trace
 
 # Initialise tuples and variables
 composite_shots = []
+composite_colour = []
 calibration_shots = []
 
 # Coordinates of the 'fired' shot
@@ -80,6 +77,5 @@ calib_text_red_min = 127
 # Sound capture parameters
 audio_chunk_size = 4410
 
-# Audio fingerprint of a shot being fired (FFT analysis from mictest.py)
-audio_trigger_frequency = 300 # Anschutz 1813 dryfiring empty cases =~ 298
+# Audio fingerprint of a shot being fired
 audio_trigger_threshold = 0.1
