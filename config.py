@@ -36,6 +36,8 @@ scale_factor = simulated_range_length / real_range_length
   
 # video capture object
 captured_image_flip_needed = False # Whether the camera is mounted upside down
+video_frame_width = 640 # Capture size width
+video_frame_height = 480 # Capture size height
 video_frames = []
 
 # Recording options
