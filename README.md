@@ -117,17 +117,17 @@ S - Save the composite image (static filename at the moment; on the to-do list)
 
 V - start/stop video recording (static filename at the moment; on the to-do list)
 
-2 - Adjust the calibration down
+Down arrow (or 2) - Adjust the calibration down
 
-4 - Adjust the calibration left
+Left arrow (or 4) - Adjust the calibration left
 
-6 - Adjust the calibration right
+Right arrow (or 6) - Adjust the calibration right
 
-8 - Adjust the calibration right
+Up arrow (or 8) - Adjust the calibration up
 
-7 - Decrease the virtual range length one unit (fine tuning)
+Page Down (or 7) - Decrease the virtual range length one unit (fine tuning)
 
-9 - Increase the virtual range length one unit (fine tuning)
+Page Up (or 9) - Increase the virtual range length one unit (fine tuning)
 
 ## Disclaimer
 

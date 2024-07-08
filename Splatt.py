@@ -311,7 +311,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 initialise_trace(True)
 
         # Check for user input
-        key_press = cv2.waitKey(1) & 0xFF
+        key_press = cv2.waitKeyEx(1) # & 0xFF
         
         if key_press == ord('.'):
             print('.') if debug_level > 0 else None
@@ -345,12 +345,12 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)    
 
-        elif key_press == ord('c'):
+        elif (key_press | 32) == ord('c'):
             # Clear the trace
             initialise_trace(True)
             composite_shots = []
 
-        elif key_press == ord('d'):
+        elif (key_press | 32) == ord('d'):
             # Increase debug level
             debug_level += 1
             if debug_level > debug_max:
@@ -358,22 +358,22 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 debug_level = 0
             print('Debug level:', int(debug_level))
 
-        elif key_press == ord('f'):
+        elif (key_press | 32) == ord('f'):
             # Change the flip mode
             captured_image_flip_needed = not captured_image_flip_needed
             print('Flip required:', captured_image_flip_needed)
 
-        elif key_press == ord('p'):
+        elif (key_press | 32) == ord('p'):
             # Pause
             paused = not paused
             print('Paused:', paused) if debug_level > 0 else None
 
-        elif key_press == ord('q'):
+        elif (key_press | 32) == ord('q'):
             # Quit
             video_capture.release()
             exit()
 
-        elif key_press == ord('r'):
+        elif (key_press | 32) == ord('r'):
             # Reset for recalibration
             composite_shots = []
             calib_XY = (0, 0)
@@ -381,11 +381,11 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             shots_fired = 0
             initialise_trace(True)
 
-        elif key_press == ord('s'):
+        elif (key_press | 32) == ord('s'):
             # Save the composite image (and clear it?)
             cv2.imwrite(composite_output_file, composite_image)
         
-        elif key_press == ord('v'):
+        elif (key_press | 32) == ord('v'):
             # Start recording
             if not record_video:
                 video_start_time = time()
@@ -406,35 +406,35 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 record_video = False
                 print('Recording saved as:', video_output_file)
         
-        elif key_press == ord('2'):
+        elif (key_press == ord('2') or key_press == 2621440): # Down arrow
             calib_XY = (calib_XY[0], calib_XY[1] + 2)
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
-        elif key_press == ord('4'):
+        elif (key_press == ord('4') or key_press == 2424832): # Left arrow
             calib_XY = (calib_XY[0] - 2, calib_XY[1])
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
-        elif key_press == ord('6'):
+        elif (key_press == ord('6') or key_press == 2555904): # Right arrow
             calib_XY = (calib_XY[0] + 2, calib_XY[1])
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
-        elif key_press == ord('8'):
+        elif (key_press == ord('8') or key_press == 2490368): # Up arrow
             calib_XY = (calib_XY[0], calib_XY[1] - 2)
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
         
-        elif key_press == ord('7'):
+        elif (key_press == ord('7') or key_press == 2228224): # Page down
             # Decrease the scale factor
             if real_range_length > 1:
                 real_range_length -= 1
@@ -446,7 +446,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
-        elif key_press == ord('9'):
+        elif (key_press == ord('9') or key_press == 2162688): # Page up
             # Increase the scale factor
             scale_factor += 0.05
             print('Real range length:', real_range_length, 'm') if debug_level > 0 else None
