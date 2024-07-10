@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://docs.opencv.org/4.7.0/opencv.js"></script>
+    <title>Webcam Demo</title>
+</head>
+<body>
+    <video id="videoElement" autoplay></video>
+
+    <script>
+        // Access the user's webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                const grayMat = new cv.Mat();
+                // cv.cvtColor(stream, grayMat, cv.COLOR_RGBA2GRAY, 0);
+                var videoElement = document.getElementById('videoElement');
+                let src = new cv.Mat(videoElement.height, videoElement.width, cv.CV_8UC4);
+                let dst = new cv.Mat(videoElement.height, videoElement.width, cv.CV_8UC1);
+                let cap = new cv.VideoCapture(videoElement);
+
+                // videoElement.srcObject = stream;
+            })
+            .catch(function(error) {
+                console.error('Error accessing the webcam:', error);
+            });
+    </script>
+</body>
+</html>
