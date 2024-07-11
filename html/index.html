@@ -1,28 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://docs.opencv.org/4.7.0/opencv.js"></script>
-    <title>Webcam Demo</title>
+    <title>Webcam Brightest Point Finder</title>
+    <script async src="https://docs.opencv.org/master/opencv.js" type="text/javascript"></script>
 </head>
 <body>
-    <video id="videoElement" autoplay></video>
-
-    <script>
-        // Access the user's webcam
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                const grayMat = new cv.Mat();
-                // cv.cvtColor(stream, grayMat, cv.COLOR_RGBA2GRAY, 0);
-                var videoElement = document.getElementById('videoElement');
-                let src = new cv.Mat(videoElement.height, videoElement.width, cv.CV_8UC4);
-                let dst = new cv.Mat(videoElement.height, videoElement.width, cv.CV_8UC1);
-                let cap = new cv.VideoCapture(videoElement);
-
-                // videoElement.srcObject = stream;
-            })
-            .catch(function(error) {
-                console.error('Error accessing the webcam:', error);
+    <video id="videoInput" playsinline autoplay></video>
+    <canvas id="canvasOutput"></canvas>
+        <script>
+            let video = document.getElementById('videoInput');
+            let canvas = document.getElementById('canvasOutput');
+            let context = canvas.getContext('2d');
+    
+            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(function(err) {
+                    console.log("An error occurred: " + err);
+                });
+    
+            video.addEventListener('play', function() {
+                function processFrame() {
+                    if (video.paused || video.ended) {
+                        return;
+                    }
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    let src = cv.imread('canvasOutput');
+                    let gray = new cv.Mat();
+                    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+                    
+                    // Apply Gaussian Blur
+                    let blurred = new cv.Mat();
+                    let ksize = new cv.Size(11, 11);
+                    cv.GaussianBlur(gray, blurred, ksize, 0, 0, cv.BORDER_DEFAULT);
+                    
+                    result = cv.minMaxLoc(blurred,  new cv.Mat());
+                    let radius = 10;
+                    let color = new cv.Scalar(255, 0, 0, 255);
+                    cv.circle(src, result.maxLoc, radius, color, 1);
+                    cv.imshow('canvasOutput', src);
+                    src.delete(); gray.delete(); blurred.delete(); 
+                    requestAnimationFrame(processFrame);
+                }
+                requestAnimationFrame(processFrame);
             });
-    </script>
+        </script>
 </body>
 </html>
