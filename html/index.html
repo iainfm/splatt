@@ -6,12 +6,58 @@
 </head>
 <body>
     <video id="videoInput" playsinline autoplay></video>
-    <canvas id="canvasOutput"></canvas>
+    <canvas id="canvasOutput" width="640" height="480"></canvas>
+    <p><select id="cameraList"></select></p>
+    <!-- <img id="target" src="https://raw.githubusercontent.com/iainfm/splatt/main/Targets/1989%2025yard%20Outward%20Gauging.png" width="480" height="480" style="display:;"> -->
         <script>
             let video = document.getElementById('videoInput');
             let canvas = document.getElementById('canvasOutput');
             let context = canvas.getContext('2d');
-    
+            let cameraList = document.getElementById('cameraList');
+            // let url = 'https://raw.githubusercontent.com/iainfm/splatt/main/Targets/1989%2025yard%20Outward%20Gauging.png';
+            // const targetObj = new Image();
+            // targetObj.src = url;
+            // targetObj.setAttribute('crossOrigin', '');
+            // targetObj.crossOrigin = "Anonymous";
+            function getCameras() {
+                navigator.mediaDevices.enumerateDevices()
+                .then(function(devices) {
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    cameraList.innerHTML = '';
+                    videoDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.text = device.label || `Camera ${cameraList.length + 1}`;
+                        cameraList.appendChild(option);
+                        console.log(cameraList);
+                    });
+                })
+                .catch(function(err) {
+                    console.log("An error occurred: " + err);
+                });
+            }
+
+        function changeCamera(deviceId) {
+            const constraints = {
+                video: { deviceId: deviceId ? { exact: deviceId } : undefined }
+            };
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(function(err) {
+                    console.log("An error occurred: " + err);
+                });
+            }
+
+            cameraList.addEventListener('change', function() {
+                changeCamera(this.value);
+            });
+
+            getCameras();
+
+
             navigator.mediaDevices.getUserMedia({ video: true, audio: false })
                 .then(function(stream) {
                     video.srcObject = stream;
@@ -33,15 +79,18 @@
                     
                     // Apply Gaussian Blur
                     let blurred = new cv.Mat();
+                    // let output = new cv.Mat();
+                    let output = new cv.Mat.zeros(480, 640, cv.CV_8UC3);
+                    //let output = gray.clone();
                     let ksize = new cv.Size(11, 11);
                     cv.GaussianBlur(gray, blurred, ksize, 0, 0, cv.BORDER_DEFAULT);
                     
                     result = cv.minMaxLoc(blurred,  new cv.Mat());
                     let radius = 10;
-                    let color = new cv.Scalar(255, 0, 0, 255);
-                    cv.circle(src, result.maxLoc, radius, color, 1);
-                    cv.imshow('canvasOutput', src);
-                    src.delete(); gray.delete(); blurred.delete(); 
+                    let color = new cv.Scalar(255, 0, 0);
+                    cv.circle(output, result.maxLoc, radius, color, 1);
+                    cv.imshow('canvasOutput', output);
+                    src.delete(); gray.delete(); blurred.delete(); output.delete();
                     requestAnimationFrame(processFrame);
                 }
                 requestAnimationFrame(processFrame);
