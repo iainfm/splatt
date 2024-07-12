@@ -8,7 +8,7 @@
     <video id="videoInput" playsinline autoplay></video>
     <canvas id="canvasOutput" width="640" height="480"></canvas>
     <p><select id="cameraList"></select></p>
-    <!-- <img id="target" src="https://raw.githubusercontent.com/iainfm/splatt/main/Targets/1989%2025yard%20Outward%20Gauging.png" width="480" height="480" style="display:;"> -->
+    <img id="target" src="images/1989 25yard Outward Gauging.png" width="480" height="480" style="display:none;">
         <script>
             let video = document.getElementById('videoInput');
             let canvas = document.getElementById('canvasOutput');
@@ -80,8 +80,11 @@
                     // Apply Gaussian Blur
                     let blurred = new cv.Mat();
                     // let output = new cv.Mat();
-                    let output = new cv.Mat.zeros(480, 640, cv.CV_8UC3);
-                    //let output = gray.clone();
+                    // let output = new cv.Mat.zeros(480, 640, cv.CV_8UC3);
+                    // Read the image in target
+                    let target = document.getElementById('target');
+                    let output = cv.imread(target);
+
                     let ksize = new cv.Size(11, 11);
                     cv.GaussianBlur(gray, blurred, ksize, 0, 0, cv.BORDER_DEFAULT);
                     
