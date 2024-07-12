@@ -16,11 +16,6 @@
             let cameraList = document.getElementById('cameraList');
             const targetImageElement = document.getElementById('target');
             
-            // let url = 'https://raw.githubusercontent.com/iainfm/splatt/main/Targets/1989%2025yard%20Outward%20Gauging.png';
-            // const targetObj = new Image();
-            // targetObj.src = url;
-            // targetObj.setAttribute('crossOrigin', '');
-            // targetObj.crossOrigin = "Anonymous";
             function getCameras() {
                 navigator.mediaDevices.enumerateDevices()
                 .then(function(devices) {
@@ -31,7 +26,6 @@
                         option.value = device.deviceId;
                         option.text = device.label || `Camera ${cameraList.length + 1}`;
                         cameraList.appendChild(option);
-                        console.log(cameraList);
                     });
                 })
                 .catch(function(err) {
@@ -84,12 +78,6 @@
                     
                     // Apply Gaussian Blur
                     let blurred = new cv.Mat();
-                    // let output = new cv.Mat();
-                    // let output = new cv.Mat.zeros(480, 640, cv.CV_8UC3);
-                    // Read the image in target
-                    // let target = document.getElementById('target');
-                    // let output = targetImage.clone();;
-
                     let ksize = new cv.Size(11, 11);
                     cv.GaussianBlur(gray, blurred, ksize, 0, 0, cv.BORDER_DEFAULT);
                     
