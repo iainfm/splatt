@@ -20,6 +20,7 @@ import random
 from time import time
 from config import *     # read static variables etc
 from splatt_functions import *
+import datetime
 
 # Functions TODO: move to separate file
 
@@ -77,7 +78,7 @@ print(sd.query_devices()) if debug_level > 0 else None # Choose device numbers f
 # Shot tracking
 shot_fired = False
 shots_fired = 0
-calibrated = False
+calibrated = True if skip_calibration else False
 shot_detected = False
 paused = False
 
@@ -158,14 +159,14 @@ def calculate_shot_score(shot_loc, video_width, video_height):     # Determine t
 def convert_coordinates(shot_loc, video_width, video_height, post_calibration: bool):    # Convert the raw shot location to coordinates based on the scale factor and calibration offset
     coords = shot_loc
     
+    # Subtract the calibration offset
+    coords = np.subtract(coords, calib_XY)
+
     # Only scale the shot once calibration is complete
     if post_calibration:
-            coords = np.subtract(coords, np.divide(video_size, 2))
-            coords = np.multiply(coords, scale_factor)
-            coords = np.add(coords, np.divide(video_size, 2))
-
-    # Add the calibration offset
-    coords = np.add(coords, calib_XY)
+        coords = np.subtract(coords, np.divide(video_size, 2))
+        coords = np.multiply(coords, scale_factor)
+        coords = np.add(coords, np.divide(video_size, 2))
 
     # Convert to integers
     coords = np.rint(coords).astype(int)
@@ -176,7 +177,10 @@ def convert_coordinates(shot_loc, video_width, video_height, post_calibration: b
 with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, callback = process_audio, blocksize = 4410):
     while True: # Get the video frame
         video_ret, video_frame = video_capture.read()
-        captured_image = video_frame.copy()
+        try:
+            captured_image = video_frame.copy()
+        except:
+            print('Video frame copy failed.')
 
         # If set, flip the image
         if captured_image_flip_needed:
@@ -188,8 +192,6 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
 
         # Find the point of max brightness
         (min_brightness, max_brightness, min_loc, max_loc) = cv2.minMaxLoc(grey_image)
-
-        print(max_brightness, '@', max_loc) if ( target_file_image.shape[0] != target_file_image.shape[1]) else None
 
         # If minimum brightness not met skip the rest of the loop
         if max_brightness > detection_threshold:
@@ -262,7 +264,6 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
 
             # Give it a random colour
             random_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
-            print(random_colour)
             composite_colour.append(random_colour)
 
 
@@ -313,10 +314,13 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         key_press = cv2.waitKeyEx(1)
         
         if key_press == ord('.'):
-            print('.') if debug_level > 0 else None
+            if debug_level > 0:
+                print('calib_XY:', calib_XY)
+                print('scale_factor:', scale_factor)
+                print('max_loc:', max_loc)
 
         elif key_press == 13: # User has finished calibrating
-            if shots_fired > 0: # Do we still need to test for this?
+            if (shots_fired > 0) or (skip_calibration == True): # Do we still need to test for this?
                 calibrated = True
 
                 # Find the spread of calibration shots
@@ -372,7 +376,8 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             initialise_trace(True)
 
         elif (key_press | 32) == ord('s'): # Save the composite image (and clear it?)
-            cv2.imwrite(composite_output_file, composite_image)
+            t = datetime.datetime.now()
+            cv2.imwrite(composite_output_file + '-' + t.strftime("%Y%m%d-%H%M%S") + '.png', composite_image)
         
         elif (key_press | 32) == ord('v'): # Video recording
             if not record_video: # Start recording
@@ -384,37 +389,42 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 video_length = time() - video_start_time
                 video_fps = int(len(video_frames) / video_length)
                 four_cc = cv2.VideoWriter_fourcc(*'XVID')
-                video_out = cv2.VideoWriter(video_output_file, four_cc, video_fps, video_size)
+                t=datetime.datetime.now()
+                video_out = cv2.VideoWriter(video_output_file + '-' + t.strftime("%Y%m%d-%H%M%S") + '.avi', four_cc, video_fps, video_size)
 
                 for frame in video_frames:
                     video_out.write(frame)
 
                 record_video = False
-                print('Recording saved as:', video_output_file)
+                print('Recording saved as:', video_output_file + '-' + t.strftime("%Y%m%d-%H%M%S") + '.avi')
         
         elif (key_press == ord('2') or key_press == 2621440): # Down arrow - adjust calibration down
-            calib_XY = (calib_XY[0], calib_XY[1] + 2)
+            calib_XY = (calib_XY[0], calib_XY[1] - 2)
+            print('calib_XY:', calib_XY) if debug_level > 0 else None
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
         elif (key_press == ord('4') or key_press == 2424832): # Left arrow - adjust calibration left
-            calib_XY = (calib_XY[0] - 2, calib_XY[1])
+            calib_XY = (calib_XY[0] + 2, calib_XY[1])
+            print('calib_XY:', calib_XY) if debug_level > 0 else None
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
         elif (key_press == ord('6') or key_press == 2555904): # Right arrow - adjust calibration right
-            calib_XY = (calib_XY[0] + 2, calib_XY[1])
+            calib_XY = (calib_XY[0] - 2, calib_XY[1])
+            print('calib_XY:', calib_XY) if debug_level > 0 else None
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
 
         elif (key_press == ord('8') or key_press == 2490368): # Up arrow - adjust calibration up
-            calib_XY = (calib_XY[0], calib_XY[1] - 2)
+            calib_XY = (calib_XY[0], calib_XY[1] + 2)
+            print('calib_XY:', calib_XY) if debug_level > 0 else None
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
@@ -426,6 +436,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             scale_factor -= 0.05
             if scale_factor < 0.05:
                 scale_factor = 0.05
+            print('Scale factor:', scale_factor) if debug_level > 0 else None
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)
@@ -433,7 +444,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
 
         elif (key_press == ord('9') or key_press == 2162688): # Page up - Increase the scale factor
             scale_factor += 0.05
-            print('Real range length:', real_range_length, 'm') if debug_level > 0 else None
+            print('Scale factor:', scale_factor) if debug_level > 0 else None
             composite_image = blank_target_image.copy()
             target_image = blank_target_image.copy()
             draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image)

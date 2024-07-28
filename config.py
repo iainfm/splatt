@@ -6,13 +6,14 @@ debug_max = 2     # max debug level
 video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
-real_range_length = 20      # How far from your real-world shooting point to your target (units must match simulated range length)
+real_range_length = 15      # How far from your real-world shooting point to your target (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
-auto_reset_time = 3         # Number of seconds after the shot before resetting
+auto_reset_time = 10        # Number of seconds after the shot before resetting
 shots_per_series = 5        # How many shots before auto-resetting
-series_reset_pause = 3      # seconds to pause before starting a new series
+series_reset_pause = 20     # seconds to pause before starting a new series
 target_index = 3            # Target to use (see below). Use zero for the first target in the list, 1 for the second, etc.
+skip_calibration = False     # Skip the calibration step
 
 # Target dimensions
 # (name, diameter (mm), filename, simulated_range_length, (ring scores hi->low), gauging method (inward/outward))
@@ -42,8 +43,8 @@ video_frames = []
 
 # Recording options
 record_video = False # (Do not set to true here)
-video_output_file = 'output.avi'
-composite_output_file = 'composite.png'
+video_output_file = 'output'
+composite_output_file = 'composite'
 
 # Audio and video processing options
 blur_radius = 11          # must be an odd number, or else GaussianBlur will fail. Lower is better for picking out point sources
@@ -52,7 +53,7 @@ detection_threshold = 50  # Trigger value to detect the reference point
 # Plotting colours and options
 init_line_colour = (0, 0, 255, 0) # (Blue, Green, Red)
 shot_colour = (255, 0, 255)       # Magenta
-line_thickness = 2
+line_thickness = 4
 colour_change_rate = (0, 15, -15) # Rates of colour change per frame (b, g, r)
 display_shot_time = True # Overlay a timer onto the trace
 
@@ -80,4 +81,4 @@ calib_text_red_min = 127
 audio_chunk_size = 4410
 
 # Audio fingerprint of a shot being fired
-audio_trigger_threshold = 0.1
+audio_trigger_threshold = 0.5

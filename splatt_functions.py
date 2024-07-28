@@ -2,7 +2,7 @@
 
 def calibrate_offset(video_width: int, video_height: int, max_loc_X: int, max_loc_Y: int) -> int:
     # Calibrate offset to point source
-    return (int((video_width / 2) - max_loc_X), int((video_height / 2) - max_loc_Y))
+    return (int(max_loc_X - (video_width / 2)), int(max_loc_Y - (video_height/2)))
 
 def convert_to_pixels(size_in_mm, target_diameter, video_height: int) -> int:
     # Convert real-world dimensions to pixels base on target_szie:image_height
