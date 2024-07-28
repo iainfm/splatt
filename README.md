@@ -139,7 +139,7 @@ Apologies for the quality of this readme. It will improve as time goes on!
 
 ## Images
 
-![img](Images/prototype2.jpg)
+![img](Images/Prototype2.jpg)
 
 Prototype Webcam arrangement
 
