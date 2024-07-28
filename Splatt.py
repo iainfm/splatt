@@ -106,7 +106,7 @@ def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
 
     for recorded_shot in composite_shots:
 
-        calibrated_shot = convert_coordinates(recorded_shot, video_width, video_height, calibrated)
+        calibrated_shot = convert_coordinates(recorded_shot, video_size, calibrated)
 
         shot_text = 'Shot ' + str(shots_plotted + 1) + ':' + str(calculate_shot_score(calibrated_shot, video_width, video_height))
         cv2.putText(composite_image, shot_text, (5, 50 + (25 * shots_plotted)), font, 1, (0, 0, 0), 1, 1)
@@ -128,7 +128,7 @@ def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image
         # Convert the shots to the scaled and calibrated coordinates
         scaled_composite_shots = []
         for each_shot in composite_shots:
-            each_shot = convert_coordinates(each_shot, video_width, video_height, calibrated)
+            each_shot = convert_coordinates(each_shot, video_size, calibrated)
             scaled_composite_shots.append(each_shot)
 
         # Find the bounding circle of all shots so far
@@ -139,7 +139,8 @@ def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image
         actual_spread = convert_to_real(2 * bc_radius, target_diameter, video_height) # (mm)
         cv2.putText(composite_image, 'Spread: ' + str(np.around(actual_spread, 2)) + 'mm', (5, 25), font, 1, (0, 0, 0), 1, 1)
 
-def calculate_shot_score(shot_loc, video_width, video_height):     # Determine the score of the shot by scoring ring diameter / shot position / bullet size
+def calculate_shot_score(shot_loc, video_width, video_height):
+    # Determine the score of the shot by scoring ring diameter / shot position / bullet size
     real_x = convert_to_real(shot_loc[0] - (video_width / 2), target_diameter, video_height)
     real_y = convert_to_real(shot_loc[1] - (video_height / 2), target_diameter, video_height)
     real_r = ((real_x * real_x + real_y * real_y) ** 0.5)
@@ -156,7 +157,8 @@ def calculate_shot_score(shot_loc, video_width, video_height):     # Determine t
 
     return score
 
-def convert_coordinates(shot_loc, video_width, video_height, post_calibration: bool):    # Convert the raw shot location to coordinates based on the scale factor and calibration offset
+def convert_coordinates(shot_loc, video_size, post_calibration: bool):
+    # Convert the raw shot location to coordinates based on the scale factor and calibration offset
     coords = shot_loc
     
     # Subtract the calibration offset
@@ -234,12 +236,12 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 auto_reset_time_expired = True if (time() > shot_time and not paused) else False
 
             # Draw a line from the previous point to this one 
-            line_start = convert_coordinates(stored_trace[n-1], video_width, video_height, calibrated)
-            line_end = convert_coordinates(stored_trace[n], video_width, video_height, calibrated)
+            line_start = convert_coordinates(stored_trace[n-1], video_size, calibrated)
+            line_end = convert_coordinates(stored_trace[n], video_size, calibrated)
             cv2.line(target_image, line_start, line_end, line_colour[n], line_thickness)
 
         # Add an on-screen indicator to show the range is hot
-        on_bull = True if calculate_shot_score(convert_coordinates(max_loc, video_width, video_height, calibrated), video_width, video_height) == 10 else False
+        on_bull = True if calculate_shot_score(convert_coordinates(max_loc, video_size, calibrated), video_width, video_height) == 10 else False
         indicator_colour = (0, 255, 0) if on_bull else (0, 0, 255)
         
         # Clear the circle area (might be quicker to draw a square over it?)
@@ -256,7 +258,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         if recorded_shot_loc:
 
             # Draw the shot on the target image
-            calibrated_shot_loc = convert_coordinates(recorded_shot_loc, video_width, video_height, calibrated)
+            calibrated_shot_loc = convert_coordinates(recorded_shot_loc, video_size, calibrated)
             cv2.circle(target_image, calibrated_shot_loc, scaled_shot_radius, shot_colour, -1)
 
             # Store the shot in the composite_shots list
