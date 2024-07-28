@@ -1,8 +1,8 @@
 # Splatt - a DIY target shooting trainer
 
-![img](Images/splatt.gif)
+![img](Images/beta9.gif)
 
-<i>What it looks like (a few versions ago) in action</i>
+<i>What it looks like in action</i>
 
 ## Introduction
 This is an attempt to build a DIY target shooting trainer. It is based on the idea of using a webcam to track a bright spot, and using where this bright point is located on the image generated to estimate where a rifle (or other object) is pointing.
@@ -51,7 +51,7 @@ Decent-ish machine with Python 3 installed (tested on Windows)
 
 The following Python libraries installed: Numpy, OpenCV-Python, SoundDevice
 
-Webcam, ideally with a built-in microphone. Depending on the light source used, a cheap one that is sensitive to Infra Red light is useful, or a better one with its IR filter removed and a visible light filter added.
+Webcam, ideally with a built-in microphone. Depending on the light source used, a cheap one that is sensitive to Infra Red light is useful, or a better one with its IR filter removed and a visible light filter added. I am using [this](https://www.amazon.co.uk/gp/product/B09GFVR22Y/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1) one. Because of its wide field of view I have added [this](https://www.amazon.co.uk/dp/B07XD8MTYH?psc=1&ref=ppx_yo2ov_dt_b_product_details) telephoto lens to it.
 
 Point light source, eg either a visible or IR LED. CR2032 batteries can power a LED directly, or a 2xAA batter holder with a ~480R resistor in series with the LED. If you're feeling adventurous you can try using a joule thief, but I found the one I made didn't drive IR LEDs.
 
@@ -139,10 +139,10 @@ Apologies for the quality of this readme. It will improve as time goes on!
 
 ## Images
 
-![img](Images/Splatt%20Prototype.jpg)
+![img](Images/prototype2.jpg)
 
 Prototype Webcam arrangement
 
-![img](Images/composite.png)
+![img](Images/composite.png-20240728-150929.png)
 
 Example composite output
