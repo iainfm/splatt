@@ -101,7 +101,7 @@ target_file_image, blank_target_image = setup_targets(video_width, video_height)
 initialise_trace(True)
 
 def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):     # Draw the shots taken so far on the composite image
-    global video_width, video_height
+    global video_width, video_height, average_shot_loc
     shots_plotted = 0
 
     for recorded_shot in composite_shots:
