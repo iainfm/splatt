@@ -121,6 +121,18 @@ def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
         cv2.putText(composite_image, str(shots_plotted), 
                     (text_X, text_Y),
                     font, font_scale, composite_colour[shots_plotted - 1], font_thickness, line_type)
+        
+        # Calculate the average position of the shots
+        average_shot_loc = np.mean(composite_shots, axis=0)
+
+        # Display the average position of the shots
+        if len(composite_shots) > 1:
+            average_centre = convert_coordinates(average_shot_loc, video_size, calibrated)
+            cv2.circle(composite_image, (average_centre), int(scaled_shot_radius / 2), (255, 0, 0), 2)
+            # Draw crosshairs
+            cv2.line(composite_image, (average_centre[0] - scaled_shot_radius, average_centre[1]), (average_centre[0] + scaled_shot_radius, average_centre[1]), (255, 0, 0), 2)
+            cv2.line(composite_image, (average_centre[0], average_centre[1] - scaled_shot_radius), (average_centre[0], average_centre[1] + scaled_shot_radius), (255, 0, 0), 2)
+
 
 def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image):
     
@@ -275,7 +287,6 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image)
                 
             # TODO: anything else required with the recorded shot location (eg csv output)
-
             # Reset for the next shot             
             recorded_shot_loc = ()
 
@@ -329,9 +340,9 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
                 (cal_X, cal_Y), cal_radius = cv2.minEnclosingCircle(np.asarray(composite_shots))
 
                 # Add the calibration offset to any manual adjustments
-                calib_XY = np.add(calibrate_offset(video_width, video_height, cal_X, cal_Y), calib_XY)
+                calib_XY = np.add(calibrate_offset(video_width, video_height, average_shot_loc[0], average_shot_loc[1]), calib_XY)
 
-                # Plot a circle to show the calibration data
+                # Plot a circle to show the shot spread
                 cv2.circle(target_image, ((int(cal_X), int(cal_Y))), int(cal_radius), (0, 255, 255), 2)
                 cv2.circle(target_image, ((int(cal_X), int(cal_Y))), 2, (0, 255, 255), 2)
 
