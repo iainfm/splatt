@@ -146,7 +146,15 @@ def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image_o
             # Draw crosshairs
             cv2.line(composite_image, (average_centre[0] - scaled_shot_radius, average_centre[1]), (average_centre[0] + scaled_shot_radius, average_centre[1]), (255, 0, 0), 2)
             cv2.line(composite_image, (average_centre[0], average_centre[1] - scaled_shot_radius), (average_centre[0], average_centre[1] + scaled_shot_radius), (255, 0, 0), 2)
-
+            real_x_offset = convert_to_real(average_centre[0] - (video_width / 2), target_diameter, video_height)
+            real_y_offset = convert_to_real(average_centre[1] - (video_height / 2), target_diameter, video_height)
+            real_r_offset = ((real_x_offset ** 2 + real_y_offset ** 2) ** 0.5)
+            # print('Average shot offset: X:', real_x_offset, 'Y:', real_y_offset, 'R:', real_r_offset)
+            offset_x = "+" if real_x_offset > 0 else "-"
+            offset_y = "+" if real_y_offset < 0 else "-"
+            offset_text = "Offset (mm): " + offset_x + str(abs(np.around(real_x_offset, 2))) + ", " + offset_y + str(abs(np.around(real_y_offset, 2)))
+            # print(offset_text)
+            cv2.putText(composite_image, offset_text, (5, video_height - 5), font, 1, (0, 0, 0), 1, 1)
 
 def draw_bounding_circle(video_height, scaled_shot_radius, font, composite_image):
     
