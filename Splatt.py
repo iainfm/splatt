@@ -21,6 +21,7 @@ from time import time
 from config import *     # read static variables etc
 from splatt_functions import *
 import datetime
+import colorsys
 
 # Functions TODO: move to separate file
 
@@ -100,8 +101,9 @@ target_file_image, blank_target_image = setup_targets(video_width, video_height)
 
 initialise_trace(True)
 
-def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):     # Draw the shots taken so far on the composite image
-    global video_width, video_height, average_shot_loc
+def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image_old):
+    # Draw the shots taken so far on the composite image
+    global video_width, video_height, average_shot_loc, composite_image
     shots_plotted = 0
 
     for recorded_shot in composite_shots:
@@ -110,7 +112,19 @@ def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
 
         shot_text = 'Shot ' + str(shots_plotted + 1) + ':' + str(calculate_shot_score(calibrated_shot, video_width, video_height))
         cv2.putText(composite_image, shot_text, (5, 50 + (25 * shots_plotted)), font, 1, (0, 0, 0), 1, 1)
-        cv2.circle(composite_image, calibrated_shot, scaled_shot_radius, composite_colour[shots_plotted], line_thickness)
+        
+        # Plot the circle on a copy of the image, then merge it with the composite_shot image to give a transparent effect
+        # copy_image = composite_image.copy()
+        # shot_colour = (255, 127, 0)
+        cv2.circle(composite_image, calibrated_shot, scaled_shot_radius, composite_colour[shots_plotted], -1)
+        # cv2.circle(copy_image, calibrated_shot, scaled_shot_radius, shot_colour, -1)
+        # cv2.imshow('Splatt - Copy', copy_image)
+        # alpha = 0.5
+        # composite_image = cv2.addWeighted(copy_image, alpha, composite_image, 1 - alpha, 0)
+        # cv2.imshow('Splatt - Composite', composite_image)
+        # Draw a black outline around the shot
+        # cv2.circle(composite_image, calibrated_shot, scaled_shot_radius, (0, 0, 0), 1)
+        # cv2.imshow('Splatt - Copy', copy_image)
         shots_plotted += 1
                         
         # Number the shot on the composite image
@@ -120,7 +134,7 @@ def draw_composite_shots(scaled_shot_radius, font, font_scale, composite_image):
 
         cv2.putText(composite_image, str(shots_plotted), 
                     (text_X, text_Y),
-                    font, font_scale, composite_colour[shots_plotted - 1], font_thickness, line_type)
+                    font, font_scale, (0,0,0), font_thickness, line_type)
         
         # Calculate the average position of the shots
         average_shot_loc = np.mean(composite_shots, axis=0)
@@ -185,6 +199,28 @@ def convert_coordinates(shot_loc, video_size, post_calibration: bool):
     # Convert to integers
     coords = np.rint(coords).astype(int)
     return coords
+
+def mouse_callback(event, x, y, flags, param):
+    global calib_XY, composite_image, video_width, video_height
+    if event == cv2.EVENT_LBUTTONDOWN:
+        # calculate hue using distance formula from center of image
+        # hue = np.sqrt((x - video_width / 2) ** 2 + (y - video_height / 2) ** 2) / (video_width / 2)
+        # (r, g, b) = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        # R, G, B = int(255 * r), int(255 * g), int(255 * b)
+        # cv2.circle(composite_image, (x, y), 20, (R, G, B), -1)
+
+        # for x in range(1, video_width):
+        #         # hue = np.sqrt((x - video_width / 2) ** 2 + (y - video_height / 2) ** 2) / (video_width / 2)
+        #         hue = 0.15 + abs(x - (video_width / 2)) / video_width
+        #         (r, g, b) = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        #         R, G, B = int(255 * r), int(255 * g), int(255 * b)
+        #         cv2.line(composite_image, (x, 0), (x, video_height), (R, G, B), 1)
+        
+        dist = np.sqrt((x - video_width / 2) ** 2 + (y - video_height / 2) ** 2)
+        hue = 0.65 - ( abs(dist - (video_width / 2)) / video_width )
+        (r, g, b) = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        R, G, B = int(255 * r), int(255 * g), int(255 * b)
+        cv2.circle(composite_image, (x, y), 20, (R, G, B), -1)
 
 ################################################## Main Loop ##################################################
 
@@ -276,10 +312,16 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
             # Store the shot in the composite_shots list
             composite_shots.append(recorded_shot_loc)
 
-            # Give it a random colour
-            random_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
-            composite_colour.append(random_colour)
-
+            # Give it a random colour (old method)
+            # random_colour = (random.randint(1, 64) * 4 - 1, random.randint(32, 64) * 4 - 1, random.randint(1, 64) * 4 - 1)
+            # Colour it based on where it is on the target
+            # calculate hue using distance formula from center of image
+            # hue = np.sqrt((calibrated_shot_loc[0] - video_width / 2) ** 2 + (calibrated_shot_loc[1] - video_height / 2) ** 2) / (video_height / 2)
+            dist = np.sqrt((calibrated_shot_loc[0] - video_width / 2) ** 2 + (calibrated_shot_loc[1] - video_height / 2) ** 2)
+            hue = 0.65 - (abs(dist - (video_width / 2)) / video_width)
+            (r, g, b) = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+            stored_colour = (int(255 * r), int(255 * g), int(255 * b))
+            composite_colour.append(stored_colour)
 
             # Clear the composite image and redraw the shots
             composite_image = blank_target_image.copy()
@@ -313,6 +355,9 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         cv2.imshow('Splatt - Live trace', target_image)
         cv2.imshow('Splatt - Composite', composite_image)
         cv2.imshow('Splatt - Blurred Vision', grey_image) if debug_level > 0 else None
+
+        # Testing mouse operations
+        cv2.setMouseCallback('Splatt - Composite', mouse_callback)
 
         if auto_reset_time_expired:
             if (shots_fired <= shots_per_series - 1):
