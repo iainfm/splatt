@@ -3,13 +3,13 @@ debug_level =  0  # 0 (off), 1 (info), 2 (detailed)
 debug_max = 2     # max debug level
 
 # Hardware settings
-video_capture_device = 0    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
+video_capture_device = 1    # 0 is usually the first (eg built-in) camera. 1 is external (if built-in exists) TODO: make this better
 
 # Virtual shooting range and session options
 real_range_length = 15      # How far from your real-world shooting point to your target (units must match simulated range length)
 shot_calibre = 5.6          # mm (0.22")
 session_name = 'Practice 13/01/23'
-auto_reset_time = 3         # Number of seconds after the shot before resetting
+auto_reset_time = 9         # Number of seconds after the shot before resetting
 shots_per_series = 5        # How many shots before auto-resetting
 series_reset_pause = 20     # seconds to pause before starting a new series
 target_index = 3            # Target to use (see below). Use zero for the first target in the list, 1 for the second, etc.
@@ -34,7 +34,9 @@ target_folder = 'Targets'
 
 # Scaling variables
 scale_factor = simulated_range_length / real_range_length
-  
+# Override scale factor
+scale_factor = 16.0
+
 # video capture object
 captured_image_flip_needed = False # Whether the camera is mounted upside down
 video_frame_width = 640 # Capture size width

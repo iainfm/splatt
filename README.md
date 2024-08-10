@@ -51,7 +51,9 @@ Decent-ish machine with Python 3 installed (tested on Windows)
 
 The following Python libraries installed: Numpy, OpenCV-Python, SoundDevice
 
-Webcam, ideally with a built-in microphone. Depending on the light source used, a cheap one that is sensitive to Infra Red light is useful, or a better one with its IR filter removed and a visible light filter added. I am using [this](https://www.amazon.co.uk/gp/product/B09GFVR22Y/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1) one. Because of its wide field of view I have added [this](https://www.amazon.co.uk/dp/B07XD8MTYH?psc=1&ref=ppx_yo2ov_dt_b_product_details) telephoto lens to it.
+Webcam, ideally with a built-in microphone. Depending on the light source used, a cheap one that is sensitive to Infra Red light is useful, or a better one with its IR filter removed and a visible light filter added. I am using [this](https://www.amazon.co.uk/gp/product/B09GFVR22Y/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1) one.
+
+Because of its wide field of view I have added a [telephoto lens](https://www.amazon.co.uk/dp/B07XD8MTYH?psc=1&ref=ppx_yo2ov_dt_b_product_details) to it, which I'd highly recomment as it is focussable, and provides a much tighter field of view than the (normally) wide-angle webcam.
 
 Point light source, eg either a visible or IR LED. CR2032 batteries can power a LED directly, or a 2xAA batter holder with a ~480R resistor in series with the LED. If you're feeling adventurous you can try using a joule thief, but I found the one I made didn't drive IR LEDs.
 
@@ -113,9 +115,9 @@ Q - Quit
 
 R - Reset and begin again from scratch (restart calibration process)
 
-S - Save the composite image (static filename at the moment; on the to-do list)
+S - Save the composite image
 
-V - start/stop video recording (static filename at the moment; on the to-do list)
+V - start/stop video recording
 
 Down arrow (or 2) - Adjust the calibration down
 
@@ -135,14 +137,18 @@ Use at your own risk. The author accepts no responsibility for the use or misuse
 
 Don't point lasers into your eyes either.
 
-Apologies for the quality of this readme. It will improve as time goes on!
+Apologies for the quality of this readme. It will improve as time goes on! (We're still waiting - ed)
 
 ## Images
 
-![img](Images/Prototype2.jpg)
+![img](Images/Webcam-with-Telephoto.jpg)
 
-Prototype Webcam arrangement
+<i>Prototype Webcam arrangement. I've used a couple of [25mm pipe clips](https://www.amazon.co.uk/dp/B096G27MJL?psc=1&ref=ppx_yo2ov_dt_b_product_details) joined together with a small nut and bolt that securely attach the device combo to the rifle, yet allows for some fine adjustment.</i>
 
-![img](Images/composite.png-20240728-150929.png)
+![img](Images/Target-holder-with-IR-LED.jpg)
 
-Example composite output
+<i>An 'Asda' 6x6" photo frame with scaled aiming mark insert (the black object at the lower-right corner is a CR2032 batter holder with an IR LED fitted).</i>
+
+![img](composite-20240810-145020.png)
+
+<i>Example composite output showing four shots taken. The spread of the shots is indicated by they yellow circle, and the blue mark is the average location of the shots.</i>
