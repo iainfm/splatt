@@ -39,6 +39,7 @@ scale_factor = 16.0
 
 # video capture object
 captured_image_flip_needed = False # Whether the camera is mounted upside down
+captured_image_flip_mode   = -1 # -1 = both axes, 0 = x axis, 1 = y axis
 video_frame_width = 640 # Capture size width
 video_frame_height = 480 # Capture size height
 video_frames = []

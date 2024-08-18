@@ -242,7 +242,7 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
 
         # If set, flip the image
         if captured_image_flip_needed:
-            captured_image = cv2.flip(captured_image, -1)
+            captured_image = cv2.flip(captured_image, captured_image_flip_mode)
 
         # Grey-ify the image and apply a Gaussian blur to the image
         grey_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
@@ -425,6 +425,12 @@ with sd.InputStream(samplerate = audio_chunk_size, channels = 1, device = None, 
         elif (key_press | 32) == ord('f'): # Change the flip mode
             captured_image_flip_needed = not captured_image_flip_needed
             print('Flip required:', captured_image_flip_needed)
+
+        elif (key_press | 32) == ord('g'): # Change the flip axis
+            captured_image_flip_mode += 1
+            if captured_image_flip_mode > 1:
+                captured_image_flip_mode = -1
+            print('Flip mode:', captured_image_flip_mode)
 
         elif (key_press | 32) == ord('p'): # Pause
             paused = not paused

@@ -109,6 +109,8 @@ D - Change debug level
 
 F - Toggles whether to flip the image for cameras mounted upside-down
 
+G - Cycle through axis to flip (x, y or both)
+
 P - Pause / unpause (ignore any noises that might be interpreted as as shot)
 
 Q - Quit
